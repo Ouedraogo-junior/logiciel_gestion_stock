@@ -6,7 +6,7 @@ import Image from 'next/image'
 
 type Profile = {
   full_name: string
-  role: 'admin' | 'vendeur'
+  role: string
   username: string | null
 }
 
