@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await supabase
+  await (admin as any)
   .from('profiles')
   .update({ must_change_password: false })
   .eq('id', user.id)
