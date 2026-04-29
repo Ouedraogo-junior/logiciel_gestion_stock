@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigation } from '@/components/navigation-context'
 
 type Movement = {
   id: string
@@ -26,6 +27,7 @@ export default function HistoryClient({ movements }: { movements: Movement[] }) 
   const [filterReason, setFilterReason] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const { setNavigating } = useNavigation()
 
   const filtered = movements.filter(m => {
     const label = [
@@ -50,7 +52,7 @@ export default function HistoryClient({ movements }: { movements: Movement[] }) 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.push('/stock')}
+        <button onClick={() => { setNavigating(true); router.push('/stock') }}
           className="text-gray-400 hover:text-gray-600 text-sm">← Retour</button>
         <h1 className="text-xl font-bold text-gray-900">Historique des mouvements</h1>
       </div>

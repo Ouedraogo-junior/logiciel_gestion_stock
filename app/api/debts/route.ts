@@ -1,3 +1,4 @@
+// app/api/debts/route.ts
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -26,6 +27,52 @@ export async function GET() {
   return NextResponse.json(data)
 }
 
+// ─── POST : création d'une dette manuelle ─────────────────────────────────────
+// Body : { customer_name, customer_phone?, total_amount, amount_paid?, notes? }
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  const body = await request.json()
+  const { customer_name, customer_phone, total_amount, amount_paid = 0, notes } = body
+
+  if (!customer_name?.trim()) {
+    return NextResponse.json({ error: 'Nom du client requis' }, { status: 400 })
+  }
+  if (!total_amount || total_amount <= 0) {
+    return NextResponse.json({ error: 'Montant invalide' }, { status: 400 })
+  }
+  if (amount_paid < 0 || amount_paid >= total_amount) {
+    return NextResponse.json(
+      { error: 'Le montant payé doit être inférieur au total' },
+      { status: 400 }
+    )
+  }
+
+  const { data: order, error } = await admin
+    .from('orders')
+    .insert({
+      customer_name: customer_name.trim(),
+      customer_phone: customer_phone?.trim() || null,
+      status: 'DEBT',
+      total_amount,
+      amount_paid,
+      // balance_due calculé par trigger
+      notes: notes?.trim() || null,
+      created_by: user.id,
+      updated_by: user.id,
+    } as any)
+    .select('id, order_number, customer_name, customer_phone, status, total_amount, amount_paid, balance_due, created_at')
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(order, { status: 201 })
+}
+
+// ─── PATCH : marquer comme payé ───────────────────────────────────────────────
 export async function PATCH(request: Request) {
   const supabase = await createClient()
   const admin = createAdminClient()
@@ -36,7 +83,6 @@ export async function PATCH(request: Request) {
   const { order_id } = await request.json()
   if (!order_id) return NextResponse.json({ error: 'order_id requis' }, { status: 400 })
 
-  // Récupérer la commande
   const { data: order, error: orderError } = await admin
     .from('orders')
     .select('id, order_number, total_amount')
@@ -45,7 +91,6 @@ export async function PATCH(request: Request) {
 
   if (orderError || !order) return NextResponse.json({ error: 'Commande introuvable' }, { status: 404 })
 
-  // Marquer comme payé
   const { error: updateError } = await admin
     .from('orders')
     .update({
@@ -58,23 +103,21 @@ export async function PATCH(request: Request) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  // Générer un nouveau reçu PAID
   const { data: receipt, error: receiptError } = await admin
-  .from('receipts')
-  .insert({
-    order_id,
-    stamp_type: 'PAID',
-    stamp_applied_by: user.id,
-    stamp_applied_at: new Date().toISOString(),
-    generated_by: user.id,
-    generated_at: new Date().toISOString(),
-  } as any)
-  .select('id, receipt_number')
-  .single()
+    .from('receipts')
+    .insert({
+      order_id,
+      stamp_type: 'PAID',
+      stamp_applied_by: user.id,
+      stamp_applied_at: new Date().toISOString(),
+      generated_by: user.id,
+      generated_at: new Date().toISOString(),
+    } as any)
+    .select('id, receipt_number')
+    .single()
 
   if (receiptError) return NextResponse.json({ error: receiptError.message }, { status: 500 })
 
-  // Données complètes pour le PDF
   const { data: fullOrder } = await admin
     .from('orders')
     .select(`

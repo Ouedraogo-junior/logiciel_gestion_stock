@@ -62,14 +62,8 @@ export default function ReceiptModal({ order, shop, receipt_number, stamp_type, 
 
   function handlePrint() {
     if (!instance.url) return
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = instance.url
-    document.body.appendChild(iframe)
-    iframe.onload = () => {
-      iframe.contentWindow?.print()
-      setTimeout(() => document.body.removeChild(iframe), 1000)
-    }
+    // Ouvre le PDF dans un nouvel onglet → l'utilisateur imprime depuis le viewer natif
+    window.open(instance.url, '_blank')
   }
 
   return (
@@ -86,18 +80,29 @@ export default function ReceiptModal({ order, shop, receipt_number, stamp_type, 
         {instance.loading && (
           <p className="text-sm text-gray-400 text-center mb-4">Préparation du reçu...</p>
         )}
-
         {instance.error && (
           <p className="text-sm text-red-600 text-center mb-4">Erreur PDF : {instance.error}</p>
         )}
 
+        {/* Bouton principal : ouvre le PDF dans un nouvel onglet pour impression */}
         <button
           onClick={handlePrint}
-          disabled={instance.loading || !!instance.error}
+          disabled={instance.loading || !!instance.error || !instance.url}
           className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 mb-2"
         >
-          🖨 Imprimer le reçu
+          🖨 Ouvrir et imprimer le reçu
         </button>
+
+        {/* Bouton secondaire : téléchargement direct */}
+        {instance.url && (
+          <a
+            href={instance.url}
+            download={`${receipt_number}.pdf`}
+            className="block w-full text-center py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 mb-2"
+          >
+            ⬇ Télécharger le PDF
+          </a>
+        )}
 
         <button
           onClick={onClose}

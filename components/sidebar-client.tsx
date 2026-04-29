@@ -1,8 +1,10 @@
 'use client'
+// components/sidebar-client.tsx
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
+import { useNavigation } from '@/components/navigation-context'
 
 type Profile = {
   full_name: string
@@ -20,15 +22,13 @@ const navItems = [
 ]
 
 const adminItems = [
-  { href: '/stats',          label: 'Statistiques', icon: '📊' },
+  { href: '/stats',          label: 'Statistiques', icon: '📈' },
   { href: '/settings/shop',  label: 'Boutique',     icon: '🏪' },
   { href: '/settings/users', label: 'Utilisateurs', icon: '👥' },
 ]
 
-
-// Déclarer HORS du composant SidebarClient
 function SidebarContent({
-  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen
+  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen,
 }: {
   shopName: string
   logoUrl: string | null
@@ -68,7 +68,9 @@ function SidebarContent({
         {navItems.map(item => (
           <button key={item.href} onClick={() => navigate(item.href)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
-              isActive(item.href) ? 'bg-blue-600 text-white font-medium' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              isActive(item.href)
+                ? 'bg-blue-600 text-white font-medium'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
             }`}>
             <span className="text-base leading-none w-5 text-center">{item.icon}</span>
             {item.label}
@@ -83,7 +85,9 @@ function SidebarContent({
             {adminItems.map(item => (
               <button key={item.href} onClick={() => navigate(item.href)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
-                  isActive(item.href) ? 'bg-blue-600 text-white font-medium' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  isActive(item.href)
+                    ? 'bg-blue-600 text-white font-medium'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}>
                 <span className="text-base leading-none w-5 text-center">{item.icon}</span>
                 {item.label}
@@ -120,6 +124,7 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { setNavigating } = useNavigation()
   const [shopName, setShopName] = useState('GestionBoutique')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
@@ -142,11 +147,19 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
   }
 
   function navigate(href: string) {
+    // Ne pas déclencher le skeleton si on clique sur la route déjà active
+    const isAlreadyActive =
+      href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+
+    if (!isAlreadyActive) {
+      setNavigating(true)
+    }
+
     router.push(href)
     setOpen(false)
   }
 
-   const contentProps = { shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen }
+  const contentProps = { shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen }
 
   return (
     <>
@@ -157,7 +170,6 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
 
       {/* Mobile — topbar + drawer */}
       <div className="md:hidden">
-        {/* Topbar mobile */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-gray-900 border-b border-gray-800 h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             {logoUrl ? (
@@ -177,12 +189,10 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
           </button>
         </div>
 
-        {/* Overlay */}
         {open && (
           <div className="fixed inset-0 z-40 bg-black/60" onClick={() => setOpen(false)} />
         )}
 
-        {/* Drawer */}
         <aside className={`fixed top-0 left-0 h-full w-64 z-50 bg-gray-900 transform transition-transform duration-300 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}>

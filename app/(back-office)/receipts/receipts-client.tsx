@@ -73,9 +73,20 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+
+      {/* ── Overlay spinner ── */}
+      {loadingId && (
+        <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium text-gray-700">Préparation du reçu...</p>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-xl font-bold text-gray-900 mb-6">Reçus</h1>
 
-      {/* Stats — 1 col mobile, 3 col desktop */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500">Total reçus</p>
@@ -95,7 +106,7 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
         </div>
       </div>
 
-      {/* Filtres — stack mobile */}
+      {/* Filtres */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-5">
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Rechercher par reçu, client ou commande..."
@@ -156,10 +167,10 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => reprint(r)}
-                    disabled={loadingId === r.id}
-                    className="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition"
+                    disabled={!!loadingId}
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
                   >
-                    {loadingId === r.id ? '...' : '🖨 Réimprimer'}
+                    🖨 Réimprimer
                   </button>
                 </td>
               </tr>
@@ -184,7 +195,6 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 {STAMP_LABELS[r.stamp_type].label}
               </span>
             </div>
-
             <div className="grid grid-cols-2 gap-2 text-xs mb-3">
               <div>
                 <p className="text-gray-400">Montant</p>
@@ -195,7 +205,6 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 <p className="font-medium text-gray-900">{r.seller_name ?? '—'}</p>
               </div>
             </div>
-
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
                 {new Date(r.generated_at).toLocaleDateString('fr-FR', {
@@ -205,10 +214,10 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
               </p>
               <button
                 onClick={() => reprint(r)}
-                disabled={loadingId === r.id}
-                className="text-xs text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition"
+                disabled={!!loadingId}
+                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                {loadingId === r.id ? '...' : '🖨 Réimprimer'}
+                🖨 Réimprimer
               </button>
             </div>
           </div>

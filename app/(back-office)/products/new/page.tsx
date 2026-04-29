@@ -1,3 +1,4 @@
+// app/(back-office)/products/new/page.tsx
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -63,6 +64,14 @@ export default function NewProductPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {loading && (
+          <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
+              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium text-gray-700">Enregistrement en cours...</p>
+            </div>
+          </div>
+        )}
         {/* Infos produit */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
           <h2 className="font-semibold text-gray-800">Informations générales</h2>

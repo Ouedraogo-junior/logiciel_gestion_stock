@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigation } from '@/components/navigation-context'
 
 type Variant = {
   id: string
@@ -29,6 +30,8 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
+  const { setNavigating } = useNavigation()
+
 
   const categories = Array.from(new Set(initialProducts.map(p => p.category).filter(Boolean)))
 
@@ -55,7 +58,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Produits</h1>
-        <button onClick={() => router.push('/products/new')}
+        <button onClick={() => { setNavigating(true); router.push('/products/new') }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
           + Nouveau
         </button>
@@ -77,7 +80,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
         <div className="text-center py-16 text-gray-400">
           <p className="text-4xl mb-3">📦</p>
           <p className="text-sm">Aucun produit trouvé</p>
-          <button onClick={() => router.push('/products/new')}
+          <button onClick={() => { setNavigating(true); router.push('/products/new') }}
             className="mt-4 text-blue-600 text-sm hover:underline">
             Créer le premier produit
           </button>
@@ -127,7 +130,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => router.push(`/products/${p.id}`)}
+                        <button onClick={() => { setNavigating(true); router.push(`/products/${p.id}`) }}
                           className="text-xs text-blue-600 hover:underline">Voir →</button>
                       </td>
                     </tr>
@@ -143,7 +146,7 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
               const stock = totalStock(p.product_variants)
               return (
                 <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4"
-                  onClick={() => router.push(`/products/${p.id}`)}>
+                  onClick={() => { setNavigating(true); router.push(`/products/${p.id}`) }}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 truncate">{p.name}</p>

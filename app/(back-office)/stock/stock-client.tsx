@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigation } from '@/components/navigation-context'
 
 const REASONS_IN = ['Achat', 'Retour', 'Correction']
 const REASONS_OUT = ['Perte', 'Correction']
@@ -57,6 +58,7 @@ export default function StockClient({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const { setNavigating } = useNavigation()
 
   const reasons = form.type === 'IN' ? REASONS_IN : REASONS_OUT
 
@@ -97,7 +99,7 @@ export default function StockClient({
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Stock</h1>
-        <button onClick={() => setShowForm(!showForm)}
+        <button onClick={() => { setNavigating(true); setShowForm(!showForm) }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
           + Mouvement
         </button>
@@ -122,7 +124,15 @@ export default function StockClient({
 
       {/* Formulaire mouvement */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-5 mb-6 space-y-4">
+        <form onSubmit={handleSubmit} className="relative bg-white border border-gray-200 rounded-xl p-5 mb-6 space-y-4">
+          {loading && (
+            <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm font-medium text-gray-700">Enregistrement...</p>
+              </div>
+            </div>
+          )}
           <h2 className="font-semibold text-gray-800">Nouveau mouvement</h2>
           <div>
             <label className="text-xs font-medium text-gray-600">Rechercher un produit</label>
@@ -193,7 +203,7 @@ export default function StockClient({
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-800 text-sm">Derniers mouvements</h2>
-          <button onClick={() => router.push('/stock/history')}
+          <button onClick={() => { setNavigating(true); router.push('/stock/history') }}
             className="text-xs text-blue-600 hover:underline">Voir tout →</button>
         </div>
 

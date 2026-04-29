@@ -129,8 +129,42 @@ export default function UsersPage() {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-500">Chargement...</p>
-      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 animate-pulse">
+                <div className="h-2.5 w-20 bg-gray-200 rounded mb-2" />
+                <div className="h-7 w-24 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className={`bg-white border border-gray-200 rounded-xl p-5 animate-pulse ${i === 2 ? 'sm:col-span-2' : ''}`}>
+                <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="flex justify-between py-2 border-b border-gray-100">
+                    <div className="h-3 w-28 bg-gray-200 rounded" />
+                    <div className="h-3 w-16 bg-gray-200 rounded" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse">
+            <div className="h-4 w-40 bg-gray-200 rounded mb-4" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2">
+                <div className="h-3 w-4 bg-gray-200 rounded" />
+                <div className="flex-1">
+                  <div className="h-3 w-40 bg-gray-200 rounded mb-1" />
+                  <div className="h-1.5 bg-gray-100 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : users.length === 0 ? null : (
         <>
           {/* Table desktop */}
           <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">

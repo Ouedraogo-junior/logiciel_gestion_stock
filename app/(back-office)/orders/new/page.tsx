@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { useNavigation } from '@/components/navigation-context'
 const ReceiptModal = dynamic(() => import('@/components/receipt-modal'), { ssr: false })
 
 type Product = { name: string; brand: string | null }
@@ -47,6 +48,7 @@ export default function NewOrderPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+  const { setNavigating } = useNavigation()
 
   useEffect(() => {
     fetch('/api/products/variants')
@@ -125,10 +127,18 @@ export default function NewOrderPage() {
         )
         }
 
-return (
+  return (
     <div className="p-6 max-w-5xl mx-auto">
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium text-gray-700">Enregistrement en cours...</p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600 text-sm">← Retour</button>
+        <button onClick={() => { setNavigating(true); router.back() }} className="text-gray-400 hover:text-gray-600 text-sm">← Retour</button>
         <h1 className="text-xl font-bold text-gray-900">Nouvelle vente</h1>
       </div>
 

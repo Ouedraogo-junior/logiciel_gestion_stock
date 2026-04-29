@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useNavigation } from '@/components/navigation-context'
 
 type Order = {
   id: string
@@ -25,6 +26,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const { setNavigating } = useNavigation()
 
   const filtered = initialOrders.filter(o => {
     const matchSearch = o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,7 +48,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Ventes</h1>
         <button
-          onClick={() => router.push('/orders/new')}
+          onClick={() => { setNavigating(true); router.push('/orders/new') }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
         >
           + Nouvelle vente
