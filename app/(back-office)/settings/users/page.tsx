@@ -1,4 +1,3 @@
-// app/(back-office)/settings/users/page.tsx
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
@@ -11,8 +10,10 @@ export default async function UsersPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await admin
+  const { data: rawProfile } = await admin
     .from('profiles').select('role').eq('id', user.id).single()
+
+  const profile = rawProfile as { role: string } | null
 
   if (profile?.role !== 'admin') redirect('/dashboard')
 
