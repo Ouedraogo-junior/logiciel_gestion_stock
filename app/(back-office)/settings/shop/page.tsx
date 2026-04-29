@@ -19,8 +19,8 @@ export default async function ShopSettingsPage() {
 
   const { data: shop } = await admin
     .from('shop_settings')
-    .select('name, phone, email, address, description')
+    .select('name, phone, email, address, description, logo_url')
     .single()
 
-  return <ShopSettingsClient initialShop={shop ?? { name: '', phone: null, email: null, address: null, description: null }} />
+  return <ShopSettingsClient initialShop={shop ?? { name: '', phone: null, email: null, address: null, description: null, logo_url: null }} />
 }
