@@ -13,7 +13,7 @@ type Variant = {
   storage: string | null
   condition: string | null
   stock_qty: number
-  alert_threshold: number
+  alert_threshold: number | null
   products: Product | null
 }
 
