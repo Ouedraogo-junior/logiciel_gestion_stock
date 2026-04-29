@@ -21,7 +21,7 @@ type ReceiptData = {
   stamp_type: 'PAID' | 'DELIVERED' | 'NONE'
   order: any
   seller_name: string | null
-  shop: { name: string; phone: string | null; email: string | null; address: string | null }
+  shop: { name: string; phone: string | null; email: string | null; address: string | null; logo_url: string | null}
 }
 
 const STATUS_LABELS = {
