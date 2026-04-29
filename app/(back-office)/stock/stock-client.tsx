@@ -19,19 +19,20 @@ type Variant = {
 
 type Movement = {
   id: string
-  type: 'IN' | 'OUT'
+  type: 'IN' | 'OUT'  // ← union type
   quantity: number
   reason: string | null
   note: string | null
-  creator: { full_name: string } | null
   created_at: string
+  created_by: string | null
+  creator: { full_name: string } | null  
   product_variants: {
     id: string
     sku: string
     color: string | null
     storage: string | null
     stock_qty: number
-    products: Product | null
+    products: { name: string; brand: string | null } | null
   } | null
 }
 
