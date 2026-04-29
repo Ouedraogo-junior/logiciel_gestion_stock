@@ -30,10 +30,12 @@ const orders = rawOrders as Array<{
 
 const creatorIds = [...new Set(orders?.map(o => o.created_by).filter(Boolean))]
 
-const { data: profiles } = await admin
+const { data: rawProfiles } = await admin
   .from('profiles')
   .select('id, full_name')
   .in('id', creatorIds as string[])
+
+const profiles = rawProfiles as Array<{ id: string; full_name: string }> | null
 
 const profileMap = Object.fromEntries(profiles?.map(p => [p.id, p.full_name]) ?? [])
 
