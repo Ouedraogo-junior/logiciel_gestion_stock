@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       stamp_applied_by: stamp_type !== 'NONE' ? user.id : null,
       stamp_applied_at: stamp_type !== 'NONE' ? new Date().toISOString() : null,
       generated_by: user.id,
-    })
+    } as any)
     .select('id, receipt_number')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
