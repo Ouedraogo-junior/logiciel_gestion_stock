@@ -43,13 +43,14 @@ export async function GET() {
 
   // Top 5 produits vendus
   const { data: orderItems } = await admin
-    .from('order_items')
-    .select(`
-      quantity,
-      product_variants (
-        products (name)
-      )
-    `)
+  .from('order_items')
+  .select(`
+    quantity,
+    product_variants (
+      products (name)
+    )
+  `)
+  .returns<{ quantity: number; product_variants: { products: { name: string } | null } | null }[]>()
 
   // Agréger par produit
   const productMap: Record<string, number> = {}
