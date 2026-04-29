@@ -15,8 +15,8 @@ type Variant = {
   sell_price: number
   stock_qty: number
   alert_threshold: number
-  is_archived: boolean
-  created_at: string
+  is_archived: boolean | null  // ← nullable
+  created_at: string | null    // ← nullable
 }
 
 type Product = {
@@ -25,9 +25,9 @@ type Product = {
   brand: string | null
   category: string | null
   description: string | null
-  is_public: boolean
-  is_archived: boolean
-  created_at: string
+  is_public: boolean | null    // ← nullable
+  is_archived: boolean | null  // ← nullable
+  created_at: string | null    // ← nullable
   product_variants: Variant[]
 }
 
@@ -44,7 +44,7 @@ export default function ProductDetailClient({ product: initial }: { product: Pro
     brand: initial.brand ?? '',
     category: initial.category ?? '',
     description: initial.description ?? '',
-    is_public: initial.is_public,
+    is_public: initial.is_public ?? false
   })
   const [showAddVariant, setShowAddVariant] = useState(false)
   const [newVariant, setNewVariant] = useState(emptyVariantForm())
@@ -149,6 +149,7 @@ export default function ProductDetailClient({ product: initial }: { product: Pro
 
   const activeVariants = product.product_variants.filter(v => !v.is_archived)
   const archivedVariants = product.product_variants.filter(v => v.is_archived)
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
