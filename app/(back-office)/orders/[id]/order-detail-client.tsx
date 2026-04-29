@@ -10,7 +10,7 @@ type OrderItem = {
   quantity: number
   unit_price: number
   discount: number
-  subtotal: number
+  subtotal: number | null  // ← nullable
   product_variants: {
     sku: string
     color: string | null
@@ -148,7 +148,7 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
                     <td className="px-4 py-3">{item.quantity}</td>
                     <td className="px-4 py-3">{item.unit_price.toLocaleString()}</td>
                     <td className="px-4 py-3">{item.discount > 0 ? `-${item.discount.toLocaleString()}` : '—'}</td>
-                    <td className="px-4 py-3 font-medium">{item.subtotal.toLocaleString()} FCFA</td>
+                    <td className="px-4 py-3 font-medium">{(item.subtotal ?? 0).toLocaleString()} FCFA</td>
                   </tr>
                 ))}
               </tbody>
