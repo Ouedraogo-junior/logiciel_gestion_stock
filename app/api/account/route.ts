@@ -41,7 +41,7 @@ export async function PATCH(request: Request) {
 
   await admin
     .from('profiles')
-    .update({ must_change_password: false })
+    .update({ must_change_password: false } as any)
     .eq('id', user.id)
 
   return NextResponse.json({ success: true })
