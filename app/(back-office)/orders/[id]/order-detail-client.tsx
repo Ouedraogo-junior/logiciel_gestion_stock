@@ -55,7 +55,7 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
     stamp_type: 'PAID' | 'DELIVERED' | 'NONE'
     order: any
     seller_name: string | null
-    shop: { name: string; phone: string | null; email: string | null; address: string | null }
+    shop: { name: string; phone: string | null; email: string | null; address: string | null; logo_url: string | null}
   } | null>(null)
 
   async function handlePrint() {
