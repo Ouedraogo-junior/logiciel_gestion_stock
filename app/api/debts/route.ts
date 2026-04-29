@@ -51,10 +51,9 @@ export async function PATCH(request: Request) {
     .update({
       status: 'PAID',
       amount_paid: order.total_amount,
-    //   balance_due: 0,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', order_id)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
