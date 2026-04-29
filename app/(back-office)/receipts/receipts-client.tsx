@@ -9,7 +9,7 @@ type Receipt = {
   receipt_number: string
   stamp_type: 'PAID' | 'DELIVERED' | 'NONE'
   generated_at: string
-  generated_by: string
+  generated_by: string | null
   seller_name: string | null
   orders: {
     id: string
