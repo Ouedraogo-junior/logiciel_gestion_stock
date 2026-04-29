@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       notes: notes || null,
       created_by: user.id,
       updated_by: user.id,
-    })
+    } as any)
     .select('id, order_number')
     .single()
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       stamp_applied_at: new Date().toISOString(),
       generated_by: user.id,
       generated_at: new Date().toISOString(),
-    })
+    } as any)
     .select('id, receipt_number')
     .single()
 
