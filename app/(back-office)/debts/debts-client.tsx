@@ -9,11 +9,11 @@ type Debt = {
   order_number: string
   customer_name: string
   customer_phone: string | null
-  status: 'DELIVERED' | 'DEBT'
+  status: string
   total_amount: number
   amount_paid: number
-  balance_due: number
-  created_at: string
+  balance_due: number | null
+  created_at: string | null
 }
 
 type ReceiptData = {
@@ -21,13 +21,16 @@ type ReceiptData = {
   stamp_type: 'PAID' | 'DELIVERED' | 'NONE'
   order: any
   seller_name: string | null
-  shop: { name: string; phone: string | null; email: string | null; address: string | null; logo_url: string | null}
+  shop: { name: string; phone: string | null; email: string | null; address: string | null; logo_url: string | null }
 }
 
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<string, { label: string; class: string }> = {
   DELIVERED: { label: 'Livrée', class: 'bg-blue-100 text-blue-700' },
   DEBT:      { label: 'Dette',  class: 'bg-red-100 text-red-700'  },
 }
+
+const getStatusLabel = (status: string) =>
+  STATUS_LABELS[status] ?? { label: status, class: 'bg-gray-100 text-gray-700' }
 
 export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) {
   const [debts, setDebts] = useState<Debt[]>(initialDebts)
@@ -43,12 +46,12 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
     const matchSearch = d.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       d.order_number.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !filterStatus || d.status === filterStatus
-    const matchFrom = !dateFrom || new Date(d.created_at) >= new Date(dateFrom)
-    const matchTo = !dateTo || new Date(d.created_at) <= new Date(dateTo + 'T23:59:59')
+    const matchFrom = !dateFrom || new Date(d.created_at ?? '') >= new Date(dateFrom)
+    const matchTo = !dateTo || new Date(d.created_at ?? '') <= new Date(dateTo + 'T23:59:59')
     return matchSearch && matchStatus && matchFrom && matchTo
   })
 
-  const totalDettes = debts.reduce((s, d) => s + d.balance_due, 0)
+  const totalDettes = debts.reduce((s, d) => s + (d.balance_due ?? 0), 0)
 
   async function markAsPaid(debt: Debt) {
     setLoadingId(debt.id)
@@ -82,7 +85,7 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
           <p className="text-xs text-orange-600">Résultats filtrés</p>
           <p className="text-2xl font-bold text-orange-700 mt-1">
-            {filtered.reduce((s, d) => s + d.balance_due, 0).toLocaleString()} FCFA
+            {filtered.reduce((s, d) => s + (d.balance_due ?? 0), 0).toLocaleString()} FCFA
           </p>
         </div>
       </div>
@@ -108,7 +111,7 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
 
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
-      {/* Table desktop / Cards mobile */}
+      {/* Table desktop */}
       <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -134,17 +137,17 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
                   {d.customer_phone && <p className="text-xs text-gray-400">{d.customer_phone}</p>}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[d.status].class}`}>
-                    {STATUS_LABELS[d.status].label}
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusLabel(d.status).class}`}>
+                    {getStatusLabel(d.status).label}
                   </span>
                 </td>
                 <td className="px-4 py-3 font-medium">{d.total_amount.toLocaleString()} FCFA</td>
                 <td className="px-4 py-3 text-green-600">{d.amount_paid.toLocaleString()} FCFA</td>
-                <td className="px-4 py-3 text-red-600 font-medium">{d.balance_due.toLocaleString()} FCFA</td>
+                <td className="px-4 py-3 text-red-600 font-medium">{(d.balance_due ?? 0).toLocaleString()} FCFA</td>
                 <td className="px-4 py-3 text-gray-400 text-xs">
-                  {new Date(d.created_at).toLocaleDateString('fr-FR', {
+                  {d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', {
                     day: '2-digit', month: 'short', year: 'numeric'
-                  })}
+                  }) : '—'}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
@@ -173,8 +176,8 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
                 {d.customer_phone && <p className="text-xs text-gray-400">{d.customer_phone}</p>}
                 <p className="font-mono text-xs text-gray-400 mt-0.5">{d.order_number}</p>
               </div>
-              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[d.status].class}`}>
-                {STATUS_LABELS[d.status].label}
+              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusLabel(d.status).class}`}>
+                {getStatusLabel(d.status).label}
               </span>
             </div>
 
@@ -189,15 +192,15 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
               </div>
               <div>
                 <p className="text-gray-400">Reste</p>
-                <p className="font-medium text-red-600">{d.balance_due.toLocaleString()}</p>
+                <p className="font-medium text-red-600">{(d.balance_due ?? 0).toLocaleString()}</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
-                {new Date(d.created_at).toLocaleDateString('fr-FR', {
+                {d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', {
                   day: '2-digit', month: 'short', year: 'numeric'
-                })}
+                }) : '—'}
               </p>
               <button
                 onClick={() => markAsPaid(d)}
