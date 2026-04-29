@@ -20,7 +20,7 @@ const orders = rawOrders as Array<{
   order_number: string
   customer_name: string
   customer_phone: string | null
-  status: string
+  status: 'PAID' | 'DELIVERED' | 'DEBT'
   total_amount: number
   amount_paid: number
   balance_due: number
