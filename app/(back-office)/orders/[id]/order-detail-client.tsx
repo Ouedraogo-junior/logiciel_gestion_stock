@@ -25,7 +25,7 @@ type Order = {
   order_number: string
   customer_name: string
   customer_phone: string | null
-  status: 'PAID' | 'DELIVERED' | 'DEBT'
+  status: string
   total_amount: number
   amount_paid: number
   balance_due: number
