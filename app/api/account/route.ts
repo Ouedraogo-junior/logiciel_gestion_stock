@@ -21,7 +21,7 @@ export async function PATCH(request: Request) {
     .from('profiles')
     .select('username')
     .eq('id', user.id)
-    .single()
+    .single() as { data: { username: string | null } | null }
 
   const fakeEmail = `${profile?.username}@boutique.local`
 
