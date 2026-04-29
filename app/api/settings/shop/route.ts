@@ -32,10 +32,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
 
   const body = await request.json()
+
+  const { data: shop } = await admin.from('shop_settings').select('id').single()
+  if (!shop?.id) return NextResponse.json({ error: 'Settings introuvables' }, { status: 404 })
+
   const { error } = await admin
     .from('shop_settings')
     .update({ ...body, updated_by: user.id, updated_at: new Date().toISOString() })
-    .eq('id', (await admin.from('shop_settings').select('id').single()).data?.id)
+    .eq('id', shop.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
@@ -75,11 +79,13 @@ export async function PUT(request: Request) {
     .getPublicUrl(path)
 
   const { data: shop } = await admin.from('shop_settings').select('id').single()
+  if (!shop?.id) return NextResponse.json({ error: 'Settings introuvables' }, { status: 404 })
+
   await admin.from('shop_settings').update({
     logo_url: publicUrl,
     updated_by: user.id,
     updated_at: new Date().toISOString(),
-  }).eq('id', shop!.id)
+  }).eq('id', shop.id)
 
   return NextResponse.json({ logo_url: publicUrl })
 }
