@@ -69,8 +69,7 @@ export default function StockClient({
     variantLabel(v).toLowerCase().includes(search.toLowerCase())
   )
 
-  const lowStock = variants.filter(v => v.stock_qty <= v.alert_threshold)
-
+  const lowStock = variants.filter(v => v.alert_threshold !== null && v.stock_qty <= v.alert_threshold)
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
