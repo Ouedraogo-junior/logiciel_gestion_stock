@@ -107,7 +107,7 @@ export default function UsersPage() {
             <div>
               <label className="text-xs font-medium text-gray-600">Rôle</label>
               <select value={form.role}
-                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, role: e.target.value as 'admin' | 'vendeur' }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1">
                 <option value="vendeur">Vendeur</option>
                 <option value="admin">Administrateur</option>
