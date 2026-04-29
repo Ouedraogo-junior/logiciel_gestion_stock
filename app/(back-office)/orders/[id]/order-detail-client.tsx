@@ -28,10 +28,10 @@ type Order = {
   status: string
   total_amount: number
   amount_paid: number
-  balance_due: number
+  balance_due: number | null  // ← nullable
   notes: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null   // ← nullable
+  updated_at: string | null   // ← nullable
   order_items: OrderItem[]
 }
 
@@ -164,10 +164,10 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
             {order.customer_phone && <p className="text-gray-500">{order.customer_phone}</p>}
             {order.notes && <p className="text-gray-400 text-xs mt-2">{order.notes}</p>}
             <p className="text-xs text-gray-400 pt-2">
-              {new Date(order.created_at).toLocaleDateString('fr-FR', {
+              {order.created_at ? new Date(order.created_at).toLocaleDateString('fr-FR', {
                 day: '2-digit', month: 'long', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
-              })}
+              }) : '—'}
             </p>
           </div>
 
@@ -194,8 +194,8 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
                 </div>
                 <div className="flex justify-between border-t border-gray-100 pt-2">
                   <span className="text-gray-500">Reste</span>
-                  <span className={`font-bold ${order.balance_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {order.balance_due > 0 ? `${order.balance_due.toLocaleString()} FCFA` : 'Soldé'}
+                  <span className={`font-bold ${order.balance_due != null && order.balance_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {order.balance_due != null && order.balance_due > 0 ? `${(order.balance_due).toLocaleString()} FCFA` : 'Soldé'}
                   </span>
                 </div>
               </>
