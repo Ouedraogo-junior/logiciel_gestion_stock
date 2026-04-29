@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 
   const { data: debtOrders } = await admin
     .from('orders').select('balance_due').neq('status', 'PAID')
-  const totalDettes = (debtOrders ?? []).reduce((s, o) => s + o.balance_due, 0)
+  const totalDettes = (debtOrders ?? []).reduce((s, o) => s + (o.balance_due ?? 0), 0)
 
   const { data: variants } = await admin
     .from('product_variants').select('buy_price, sell_price, stock_qty').eq('is_archived', false)
