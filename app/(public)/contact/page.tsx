@@ -6,7 +6,7 @@ export default async function ContactPage() {
   const { data: shop } = await supabase
     .from('shop_settings')
     .select('name, phone, email, address')
-    .single()
+    .single() as { data: { name: string | null; phone: string | null; email: string | null; address: string | null } | null }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
