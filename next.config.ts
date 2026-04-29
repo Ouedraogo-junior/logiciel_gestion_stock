@@ -6,20 +6,20 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     skipWaiting: true,
-  },
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/wpcqvhtmlibklpgrprig\.supabase\.co\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'supabase-images',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24 * 7,
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/wpcqvhtmlibklpgrprig\.supabase\.co\/.*/i,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'supabase-images',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 * 7,
+          },
         },
       },
-    },
-  ],
+    ],
+  },
 })
 
 const nextConfig = {
