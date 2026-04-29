@@ -60,17 +60,17 @@ export async function PATCH(request: Request) {
 
   // Générer un nouveau reçu PAID
   const { data: receipt, error: receiptError } = await admin
-    .from('receipts')
-    .insert({
-      order_id,
-      stamp_type: 'PAID',
-      stamp_applied_by: user.id,
-      stamp_applied_at: new Date().toISOString(),
-      generated_by: user.id,
-      generated_at: new Date().toISOString(),
-    })
-    .select('id, receipt_number')
-    .single()
+  .from('receipts')
+  .insert({
+    order_id,
+    stamp_type: 'PAID',
+    stamp_applied_by: user.id,
+    stamp_applied_at: new Date().toISOString(),
+    generated_by: user.id,
+    generated_at: new Date().toISOString(),
+  } as any)
+  .select('id, receipt_number')
+  .single()
 
   if (receiptError) return NextResponse.json({ error: receiptError.message }, { status: 500 })
 
