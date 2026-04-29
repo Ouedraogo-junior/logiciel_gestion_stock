@@ -10,8 +10,11 @@ export default async function ShopSettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await admin
-    .from('profiles').select('role').eq('id', user.id).single()
+  const { data: rawProfile } = await admin
+  .from('profiles').select('role').eq('id', user.id).single()
+
+  const profile = rawProfile as { role: string } | null
+
   if (profile?.role !== 'admin') redirect('/dashboard')
 
   const { data: shop } = await admin
