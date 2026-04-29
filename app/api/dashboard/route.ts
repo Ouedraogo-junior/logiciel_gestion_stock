@@ -19,6 +19,7 @@ export async function GET() {
     .select('amount_paid')
     .eq('status', 'PAID')
     .gte('created_at', todayISO)
+    .returns<{ amount_paid: number }[]>()
 
   const caToday = (todayOrders ?? []).reduce((s, o) => s + o.amount_paid, 0)
 
@@ -27,6 +28,7 @@ export async function GET() {
     .from('orders')
     .select('balance_due')
     .in('status', ['DELIVERED', 'DEBT'])
+    .returns<{ balance_due: number }[]>()
 
   const totalDettes = (debts ?? []).reduce((s, o) => s + o.balance_due, 0)
 
