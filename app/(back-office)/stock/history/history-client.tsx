@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation'
 
 type Movement = {
   id: string
-  type: 'IN' | 'OUT'
+  type: string              // ← string au lieu de l'union
   quantity: number
   reason: string | null
   note: string | null
-  created_at: string
+  created_at: string | null // ← nullable
   product_variants: {
     sku: string
     color: string | null
@@ -38,8 +38,8 @@ export default function HistoryClient({ movements }: { movements: Movement[] }) 
     const matchSearch = !search || label.includes(search.toLowerCase())
     const matchType = !filterType || m.type === filterType
     const matchReason = !filterReason || m.reason === filterReason
-    const matchFrom = !dateFrom || new Date(m.created_at) >= new Date(dateFrom)
-    const matchTo = !dateTo || new Date(m.created_at) <= new Date(dateTo + 'T23:59:59')
+    const matchFrom = !dateFrom || new Date(m.created_at ?? '') >= new Date(dateFrom)
+    const matchTo = !dateTo || new Date(m.created_at ?? '') <= new Date(dateTo + 'T23:59:59')
 
     return matchSearch && matchType && matchReason && matchFrom && matchTo
   })
@@ -136,7 +136,7 @@ export default function HistoryClient({ movements }: { movements: Movement[] }) 
                 <td className="px-4 py-3 text-gray-500">{m.reason ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-400 text-xs">{m.note ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-400 text-xs">
-                  {new Date(m.created_at).toLocaleDateString('fr-FR', {
+                  {new Date(m.created_at ?? '').toLocaleDateString('fr-FR', {
                     day: '2-digit', month: 'short', year: 'numeric',
                     hour: '2-digit', minute: '2-digit'
                   })}
