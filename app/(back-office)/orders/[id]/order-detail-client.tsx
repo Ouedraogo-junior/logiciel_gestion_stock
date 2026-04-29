@@ -35,7 +35,7 @@ type Order = {
   order_items: OrderItem[]
 }
 
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<string, { label: string; class: string }> = {
   PAID:      { label: 'Payée',  class: 'bg-green-100 text-green-700' },
   DELIVERED: { label: 'Livrée', class: 'bg-blue-100 text-blue-700'  },
   DEBT:      { label: 'Dette',  class: 'bg-red-100 text-red-700'    },
@@ -95,6 +95,8 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
     setLoading(false)
   }
 
+  const statusLabel = STATUS_LABELS[order.status] ?? { label: order.status, class: 'bg-gray-100 text-gray-700' }
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
@@ -109,8 +111,8 @@ export default function OrderDetailClient({ order: initial }: { order: Order }) 
           {printLoading ? '...' : '🖨 Imprimer reçu'}
         </button>
         <h1 className="text-xl font-bold text-gray-900 flex-1">{order.order_number}</h1>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_LABELS[order.status].class}`}>
-          {STATUS_LABELS[order.status].label}
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusLabel.class}`}>
+          {statusLabel.label}
         </span>
       </div>
 
