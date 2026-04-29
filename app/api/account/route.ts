@@ -17,7 +17,6 @@ export async function PATCH(request: Request) {
   if (new_password.length < 8)
     return NextResponse.json({ error: 'Mot de passe trop court (8 caractères min)' }, { status: 400 })
 
-  // Vérifier l'ancien mot de passe en tentant une connexion
   const { data: profile } = await admin
     .from('profiles')
     .select('username')
@@ -34,14 +33,12 @@ export async function PATCH(request: Request) {
   if (signInError)
     return NextResponse.json({ error: 'Mot de passe actuel incorrect' }, { status: 400 })
 
-  // Mettre à jour le mot de passe
   const { error } = await admin.auth.admin.updateUserById(user.id, {
     password: new_password,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Désactiver le flag must_change_password si actif
   await admin
     .from('profiles')
     .update({ must_change_password: false })

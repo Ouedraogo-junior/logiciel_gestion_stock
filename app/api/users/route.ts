@@ -7,18 +7,15 @@ export async function GET() {
   const admin = createAdminClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
   console.log('user:', user?.id)
   console.log('authError:', authError)
-
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const { data: profile, error: profileError } = await admin
     .from('profiles').select('role').eq('id', user.id).single()
-
   console.log('profile:', profile)
   console.log('profileError:', profileError)
-  
+
   if (profile?.role !== 'admin')
     return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
 
@@ -38,9 +35,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  // ← admin client pour bypasser la RLS
   const { data: profile } = await admin
     .from('profiles').select('role').eq('id', user.id).single()
+
   if (profile?.role !== 'admin')
     return NextResponse.json({ error: 'Réservé aux admins' }, { status: 403 })
 
