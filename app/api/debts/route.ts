@@ -2,6 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 export async function GET() {
   const supabase = await createClient()
@@ -69,6 +70,9 @@ export async function POST(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  revalidatePath('/debts')
+
   return NextResponse.json(order, { status: 201 })
 }
 
@@ -141,6 +145,11 @@ export async function PATCH(request: Request) {
     .from('shop_settings')
     .select('name, phone, email, address')
     .single()
+
+  revalidatePath('/debts')   
+  revalidatePath('/orders')   
+  revalidatePath('/receipts')
+  revalidatePath('/dashboard')
 
   return NextResponse.json({
     receipt_number: receipt.receipt_number,

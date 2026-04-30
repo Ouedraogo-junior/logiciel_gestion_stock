@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 
 export async function GET() {
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
     .select('full_name')
     .eq('id', user.id)
     .single()
+
+  revalidatePath('/receipts')
 
   return NextResponse.json({
     receipt_number: receipt.receipt_number,

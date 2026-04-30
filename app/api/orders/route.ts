@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 export async function GET() {
   const supabase = await createClient()
@@ -130,6 +131,10 @@ export async function POST(request: Request) {
     .from('shop_settings')
     .select('name, phone, email, address, logo_url')
     .single()
+
+  revalidatePath('/orders')
+  revalidatePath('/stock') 
+  revalidatePath('/dashboard')
 
   return NextResponse.json({
     id: order.id,

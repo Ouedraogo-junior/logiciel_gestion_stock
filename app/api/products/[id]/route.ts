@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -46,6 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       })
       .eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    revalidateTag('products')
   }
 
   // Archivage produit
@@ -55,6 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       .update({ is_archived: body.is_archived })
       .eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    revalidateTag('products')
   }
 
   // Mise à jour variante
@@ -71,6 +74,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       })
       .eq('id', body.variant_id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    revalidateTag('products')
   }
 
   // Archivage variante
@@ -80,6 +84,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       .update({ is_archived: body.is_archived })
       .eq('id', body.variant_id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    revalidateTag('products')
   }
 
   // Ajout variante
@@ -113,6 +118,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         created_by: user.id,
       })
     }
+      revalidateTag('products')
   }
 
   return NextResponse.json({ success: true })

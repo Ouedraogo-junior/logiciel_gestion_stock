@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 export async function GET() {
   const supabase = await createClient()
@@ -56,5 +57,9 @@ export async function POST(request: Request) {
     .insert({ variant_id, type, quantity: parseInt(quantity), reason, note: note || null, created_by: user.id })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  revalidatePath('/stock')  // revalide la page de stock pour rafraîchir les données
+  revalidatePath('/products')
+  revalidatePath('/dashboard')
   return NextResponse.json({ success: true }, { status: 201 })
 }

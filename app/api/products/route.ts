@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 
 type VariantInput = {
   storage: string
@@ -77,6 +78,8 @@ export async function POST(request: Request) {
       .insert(stockMovements)
     if (movementError) return NextResponse.json({ error: movementError.message }, { status: 500 })
   }
+
+  revalidatePath('/products')
 
   return NextResponse.json({ id: product.id }, { status: 201 })
 }
