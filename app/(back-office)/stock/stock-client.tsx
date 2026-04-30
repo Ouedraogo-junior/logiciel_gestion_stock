@@ -119,7 +119,7 @@ export default function StockClient({
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Stock</h1>
-        <button onClick={() => { setNavigating(true); setShowForm(!showForm) }}
+        <button onClick={() => setShowForm(!showForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
           + Mouvement
         </button>

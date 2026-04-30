@@ -84,17 +84,49 @@ export async function PATCH(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { order_id } = await request.json()
+  const { order_id, action, amount } = await request.json()
   if (!order_id) return NextResponse.json({ error: 'order_id requis' }, { status: 400 })
 
   const { data: order, error: orderError } = await admin
     .from('orders')
-    .select('id, order_number, total_amount')
+    .select('id, order_number, total_amount, amount_paid, balance_due')
     .eq('id', order_id)
     .single()
 
   if (orderError || !order) return NextResponse.json({ error: 'Commande introuvable' }, { status: 404 })
 
+  // ── Avance partielle ──────────────────────────────────────────────────────
+  if (action === 'partial_payment') {
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: 'Montant invalide' }, { status: 400 })
+    }
+    if (amount >= (order.balance_due ?? order.total_amount)) {
+      return NextResponse.json(
+        { error: 'Montant ≥ au reste dû — utilisez "Marquer payé" à la place' },
+        { status: 400 }
+      )
+    }
+
+    const new_amount_paid = order.amount_paid + amount
+
+    const { data: updated, error: updateError } = await admin
+      .from('orders')
+      .update({
+        amount_paid: new_amount_paid,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('id', order_id)
+      .select('id, order_number, customer_name, customer_phone, status, total_amount, amount_paid, balance_due, created_at')
+      .single()
+
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+    revalidatePath('/debts')
+    return NextResponse.json({ updated })
+  }
+
+  // ── Paiement total ────────────────────────────────────────────────────────
   const { error: updateError } = await admin
     .from('orders')
     .update({
@@ -136,18 +168,13 @@ export async function PATCH(request: Request) {
     .single()
 
   const { data: profile } = await admin
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
+    .from('profiles').select('full_name').eq('id', user.id).single()
 
   const { data: shop } = await admin
-    .from('shop_settings')
-    .select('name, phone, email, address')
-    .single()
+    .from('shop_settings').select('name, phone, email, address').single()
 
-  revalidatePath('/debts')   
-  revalidatePath('/orders')   
+  revalidatePath('/debts')
+  revalidatePath('/orders')
   revalidatePath('/receipts')
   revalidatePath('/dashboard')
 

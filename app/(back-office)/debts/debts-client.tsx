@@ -56,6 +56,10 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
   const [form, setForm]           = useState(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [formLoading, setFormLoading] = useState(false)
+  const [advanceModal, setAdvanceModal] = useState<{ debt: Debt } | null>(null)
+  const [advanceAmount, setAdvanceAmount]   = useState('')
+  const [advanceError, setAdvanceError]     = useState<string | null>(null)
+  const [advanceLoading, setAdvanceLoading] = useState(false)
 
   const filtered = debts.filter(d => {
     const matchSearch = d.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -111,6 +115,35 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
     setDebts(prev => [data, ...prev])
     setForm(EMPTY_FORM)
     setShowForm(false)
+  }
+
+  async function submitAdvance() {
+    if (!advanceModal) return
+    const amount = parseFloat(advanceAmount)
+    const balanceDue = advanceModal.debt.balance_due ?? 0
+
+    if (!advanceAmount || amount <= 0) return setAdvanceError('Montant invalide')
+    if (amount >= balanceDue) return setAdvanceError(`Doit être inférieur au reste dû (${balanceDue.toLocaleString()} FCFA)`)
+
+    setAdvanceLoading(true)
+    setAdvanceError(null)
+
+    const res = await fetch('/api/debts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: advanceModal.debt.id, action: 'partial_payment', amount }),
+    })
+    const data = await res.json()
+    setAdvanceLoading(false)
+
+    if (!res.ok) return setAdvanceError(data.error)
+
+    // Mettre à jour localement
+    setDebts(prev => prev.map(d =>
+      d.id === advanceModal.debt.id ? { ...d, ...data.updated } : d
+    ))
+    setAdvanceModal(null)
+    setAdvanceAmount('')
   }
 
   return (
@@ -203,13 +236,21 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
                   }) : '—'}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => markAsPaid(d)}
-                    disabled={loadingId === d.id}
-                    className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
-                  >
-                    {loadingId === d.id ? '...' : '✓ Payé'}
-                  </button>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => { setAdvanceModal({ debt: d }); setAdvanceAmount(''); setAdvanceError(null) }}
+                      className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition"
+                    >
+                      + Avance
+                    </button>
+                    <button
+                      onClick={() => markAsPaid(d)}
+                      disabled={loadingId === d.id}
+                      className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+                    >
+                      {loadingId === d.id ? '...' : '✓ Payé'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -360,6 +401,63 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
           seller_name={receiptData.seller_name}
           onClose={() => setReceiptData(null)}
         />
+      )}
+
+      {advanceModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            {advanceLoading && (
+              <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Enregistrer une avance</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {advanceModal.debt.customer_name} — Reste dû :{' '}
+              <span className="font-semibold text-red-600">
+                {(advanceModal.debt.balance_due ?? 0).toLocaleString()} FCFA
+              </span>
+            </p>
+
+            <label className="block text-xs text-gray-500 mb-1">Montant de l'avance</label>
+            <input
+              type="number"
+              min="0"
+              autoFocus
+              value={advanceAmount}
+              onChange={e => setAdvanceAmount(e.target.value)}
+              placeholder="Ex. 25000"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+
+            {advanceAmount && parseFloat(advanceAmount) > 0 && (
+              <p className="text-xs text-gray-500 mb-3">
+                Nouveau solde :{' '}
+                <span className="font-semibold text-red-600">
+                  {((advanceModal.debt.balance_due ?? 0) - parseFloat(advanceAmount)).toLocaleString()} FCFA
+                </span>
+              </p>
+            )}
+
+            {advanceError && <p className="text-sm text-red-600 mb-3">{advanceError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={submitAdvance}
+                disabled={advanceLoading}
+                className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition"
+              >
+                Confirmer
+              </button>
+              <button
+                onClick={() => { setAdvanceModal(null); setAdvanceAmount(''); setAdvanceError(null) }}
+                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
