@@ -197,6 +197,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  stampContainer: {
+    marginTop: 10,
+    alignItems: 'flex-end',
+  },
+  stampText: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    textTransform: 'uppercase',
+    padding: 6,
+    borderWidth: 1,
+    borderRadius: 4,
+  },
   footerText: { fontSize: 7, color: '#9ca3af' },
 })
 
@@ -241,6 +253,8 @@ type Props = {
   receipt_number: string
   shop: ShopSettings
   seller_name: string | null
+  stamp_type: 'PAID' | 'DELIVERED' | 'NONE'
+  format?: string
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
@@ -287,7 +301,7 @@ const MIN_ROWS = 10
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
-export function ReceiptDocument({ order, receipt_number, shop, seller_name }: Props) {
+export function ReceiptDocument({ order, receipt_number, shop, seller_name, stamp_type }: Props) {
   const date    = new Date(order.created_at)
   const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
   const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -320,6 +334,18 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name }: Pr
             <Text style={styles.receiptMeta}>{receipt_number}</Text>
             <Text style={styles.receiptMeta}>Cmd : {order.order_number}</Text>
             <Text style={styles.receiptMeta}>{dateStr} à {timeStr}</Text>
+            {stamp_type !== 'NONE' ? (
+              <View style={styles.stampContainer}>
+                <Text
+                  style={[
+                    styles.stampText,
+                    { borderColor: stamp_type === 'PAID' ? '#16a34a' : '#2563eb', color: stamp_type === 'PAID' ? '#16a34a' : '#2563eb' },
+                  ]}
+                >
+                  {stamp_type === 'PAID' ? 'Payé' : 'Livré'}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
