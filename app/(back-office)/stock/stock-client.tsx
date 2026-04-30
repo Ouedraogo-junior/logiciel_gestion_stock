@@ -72,27 +72,47 @@ export default function StockClient({
   )
 
   const lowStock = variants.filter(v => v.alert_threshold !== null && v.stock_qty <= v.alert_threshold)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    const qty = parseInt(form.quantity)
     const res = await fetch('/api/stock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, quantity: parseInt(form.quantity) }),
+      body: JSON.stringify({ ...form, quantity: qty }),
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error); setLoading(false); return }
 
-    router.refresh()
+    // ✅ Met à jour le stock localement sans refetch
+    setVariants(prev => prev.map(v =>
+      v.id === form.variant_id
+        ? { ...v, stock_qty: form.type === 'IN' ? v.stock_qty + qty : v.stock_qty - qty }
+        : v
+    ))
+
+    // ✅ Ajoute le mouvement en tête de liste localement
+    setMovements(prev => [{
+      id: crypto.randomUUID(),
+      type: form.type,
+      quantity: qty,
+      reason: form.reason,
+      note: form.note || null,
+      created_at: new Date().toISOString(),
+      created_by: null,
+      creator: null,
+      product_variants: variants.find(v => v.id === form.variant_id) as any ?? null,
+    }, ...prev].slice(0, 50))
+
     setShowForm(false)
     setForm({ variant_id: '', type: 'IN', quantity: '1', reason: 'Achat', note: '' })
     setLoading(false)
 
-    const [varRes, movRes] = await Promise.all([fetch('/api/stock/variants'), fetch('/api/stock')])
-    if (varRes.ok) setVariants(await varRes.json())
-    if (movRes.ok) setMovements(await movRes.json())
+    // ✅ Revalide en arrière-plan sans bloquer l'UI
+    router.refresh()
   }
 
   return (
