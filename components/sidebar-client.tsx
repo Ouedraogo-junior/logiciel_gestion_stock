@@ -28,7 +28,7 @@ const adminItems = [
 ]
 
 function SidebarContent({
-  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen,
+  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen, navigatingTo
 }: {
   shopName: string
   logoUrl: string | null
@@ -37,6 +37,7 @@ function SidebarContent({
   navigate: (href: string) => void
   handleLogout: () => void
   setOpen: (v: boolean) => void
+  navigatingTo: string | null
 }) {
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -72,7 +73,13 @@ function SidebarContent({
                 ? 'bg-blue-600 text-white font-medium'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white'
             }`}>
-            <span className="text-base leading-none w-5 text-center">{item.icon}</span>
+            <span className="text-base leading-none w-5 text-center relative">
+              {navigatingTo === item.href ? (
+                <span className="inline-block w-3.5 h-3.5 border-2 border-gray-400 border-t-white rounded-full animate-spin" />
+              ) : (
+                item.icon
+              )}
+            </span>
             {item.label}
           </button>
         ))}
@@ -89,7 +96,13 @@ function SidebarContent({
                     ? 'bg-blue-600 text-white font-medium'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}>
-                <span className="text-base leading-none w-5 text-center">{item.icon}</span>
+                <span className="text-base leading-none w-5 text-center relative">
+                  {navigatingTo === item.href ? (
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-gray-400 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    item.icon
+                  )}
+                </span>
                 {item.label}
               </button>
             ))}
@@ -128,6 +141,7 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
   const [shopName, setShopName] = useState('GestionBoutique')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/settings/shop')
@@ -138,7 +152,10 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
       })
   }, [])
 
-  useEffect(() => { setOpen(false) }, [pathname])
+  useEffect(() => { 
+    setOpen(false)
+    setNavigatingTo(null)
+  }, [pathname])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -147,19 +164,28 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
   }
 
   function navigate(href: string) {
-    // Ne pas déclencher le skeleton si on clique sur la route déjà active
     const isAlreadyActive =
       href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
 
     if (!isAlreadyActive) {
       setNavigating(true)
+      setNavigatingTo(href)
     }
 
     router.push(href)
     setOpen(false)
   }
 
-  const contentProps = { shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen }
+  const contentProps = {
+    shopName,
+    logoUrl,
+    profile,
+    pathname,
+    navigate,
+    handleLogout,
+    setOpen,
+    navigatingTo,
+  }
 
   return (
     <>

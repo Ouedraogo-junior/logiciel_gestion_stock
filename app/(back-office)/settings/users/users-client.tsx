@@ -70,6 +70,14 @@ export default function UsersPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      {submitting && (
+        <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium text-gray-700">Création en cours...</p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Utilisateurs</h1>
         <button

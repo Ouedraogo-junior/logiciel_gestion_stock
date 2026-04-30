@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from 'react'
+import { useState } from 'react'
 import { usePDF } from '@react-pdf/renderer'
 import { ReceiptDocument } from '@/lib/receipt-pdf'
 
@@ -47,7 +47,10 @@ type Props = {
   onClose: () => void
 }
 
+
+
 export default function ReceiptModal({ order, shop, receipt_number, stamp_type, seller_name, onClose }: Props) {
+
   const [instance] = usePDF({
     document: (
       <ReceiptDocument
@@ -56,9 +59,17 @@ export default function ReceiptModal({ order, shop, receipt_number, stamp_type, 
         stamp_type={stamp_type}
         shop={shop}
         seller_name={seller_name}
+        format="A4_double"
       />
     )
   })
+
+  const [closing, setClosing] = useState(false)
+
+  function handleClose() {
+  setClosing(true)
+  onClose()
+}
 
   function handlePrint() {
     if (!instance.url) return
@@ -105,9 +116,13 @@ export default function ReceiptModal({ order, shop, receipt_number, stamp_type, 
         )}
 
         <button
-          onClick={onClose}
-          className="w-full py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50"
+          onClick={handleClose}
+          disabled={closing}
+          className="w-full py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2"
         >
+          {closing && (
+            <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          )}
           Fermer
         </button>
       </div>
