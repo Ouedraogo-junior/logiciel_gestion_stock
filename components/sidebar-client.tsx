@@ -28,7 +28,7 @@ const adminItems = [
 ]
 
 function SidebarContent({
-  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen, navigatingTo
+  shopName, logoUrl, profile, pathname, navigate, handleLogout, setOpen, navigatingTo, prefetch
 }: {
   shopName: string
   logoUrl: string | null
@@ -38,6 +38,7 @@ function SidebarContent({
   handleLogout: () => void
   setOpen: (v: boolean) => void
   navigatingTo: string | null
+  prefetch: (href: string) => void  // ← ajouté
 }) {
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -67,7 +68,11 @@ function SidebarContent({
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map(item => (
-          <button key={item.href} onClick={() => navigate(item.href)}
+          <button
+            key={item.href}
+            onClick={() => navigate(item.href)}
+            onMouseEnter={() => prefetch(item.href)}  // ← ajouté
+            onFocus={() => prefetch(item.href)}        // ← ajouté (accessibilité clavier)
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
               isActive(item.href)
                 ? 'bg-blue-600 text-white font-medium'
@@ -90,7 +95,11 @@ function SidebarContent({
               <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">Admin</p>
             </div>
             {adminItems.map(item => (
-              <button key={item.href} onClick={() => navigate(item.href)}
+              <button
+                key={item.href}
+                onClick={() => navigate(item.href)}
+                onMouseEnter={() => prefetch(item.href)}  // ← ajouté
+                onFocus={() => prefetch(item.href)}        // ← ajouté
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
                   isActive(item.href)
                     ? 'bg-blue-600 text-white font-medium'
@@ -116,7 +125,10 @@ function SidebarContent({
           <p className="text-white text-sm font-medium truncate">{profile?.full_name}</p>
           <p className="text-gray-500 text-xs">@{profile?.username} · {profile?.role}</p>
         </div>
-        <button onClick={() => navigate('/settings/account')}
+        <button
+          onClick={() => navigate('/settings/account')}
+          onMouseEnter={() => prefetch('/settings/account')}  // ← ajouté
+          onFocus={() => prefetch('/settings/account')}        // ← ajouté
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left ${
             isActive('/settings/account') ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
           }`}>
@@ -152,7 +164,7 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
       })
   }, [])
 
-  useEffect(() => { 
+  useEffect(() => {
     setOpen(false)
     setNavigatingTo(null)
   }, [pathname])
@@ -176,6 +188,17 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
     setOpen(false)
   }
 
+  // ✅ Nouvelle fonction prefetch
+  function prefetch(href: string) {
+    const isAlreadyActive =
+      href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+
+    // Inutile de prefetch la page déjà active
+    if (!isAlreadyActive) {
+      router.prefetch(href)
+    }
+  }
+
   const contentProps = {
     shopName,
     logoUrl,
@@ -185,6 +208,7 @@ export default function SidebarClient({ profile }: { profile: Profile | null }) 
     handleLogout,
     setOpen,
     navigatingTo,
+    prefetch,  // ← passé en prop
   }
 
   return (
