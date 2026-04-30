@@ -109,11 +109,11 @@ const styles = StyleSheet.create({
     height: 16,
   },
 
-  colRef:     { width: '20%', borderRight: '0.5pt solid #cccccc', padding: '3 4' },
+  colRef:     { width: '28%', borderRight: '0.5pt solid #cccccc', padding: '3 4' },
   colDesig:   { flex: 1,      borderRight: '0.5pt solid #cccccc', padding: '3 4' },
   colQty:     { width: '10%', borderRight: '0.5pt solid #cccccc', padding: '3 4', textAlign: 'center' },
-  colPU:      { width: '14%', borderRight: '0.5pt solid #cccccc', padding: '3 4', textAlign: 'right' },
-  colMontant: { width: '16%', padding: '3 4', textAlign: 'right' },
+  colPU:      { width: '16%', borderRight: '0.5pt solid #cccccc', padding: '3 4', textAlign: 'right' },
+  colMontant: { width: '18%', padding: '3 4', textAlign: 'right' },
 
   headerText:     { fontSize: 8, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
   cellText:       { fontSize: 8, color: '#374151' },
@@ -297,7 +297,7 @@ function numberToWords(n: number): string {
   return result.trim().replace(/\s+/g, ' ')
 }
 
-const MIN_ROWS = 10
+// const MIN_ROWS = 5
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
@@ -306,7 +306,7 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name, stam
   const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
   const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
-  const emptyRows = Math.max(0, MIN_ROWS - order.order_items.length)
+  // const emptyRows = Math.max(0, MIN_ROWS - order.order_items.length)
 
   const solde = order.balance_due > 0 ? order.balance_due : order.total_amount
   const montantLettre = numberToWords(solde)
@@ -314,7 +314,7 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name, stam
 
   return (
     <Document>
-      <Page size={[595.28, 420.94]} style={styles.page}>
+      <Page size="A5" style={styles.page}>
 
         {/* ── En-tête ── */}
         <View style={styles.header}>
@@ -416,7 +416,7 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name, stam
             )
           })}
 
-          {Array.from({ length: emptyRows }).map((_, i) => (
+          {/* {Array.from({ length: emptyRows }).map((_, i) => (
             <View key={`empty-${i}`} style={styles.tableRowEmpty}>
               <View style={styles.colRef} />
               <View style={styles.colDesig} />
@@ -424,7 +424,7 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name, stam
               <View style={styles.colPU} />
               <View style={styles.colMontant} />
             </View>
-          ))}
+          ))} */}
         </View>
 
         {/* ── Pied FIXE — ancré en bas de chaque page ── */}
