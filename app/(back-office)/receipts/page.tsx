@@ -57,7 +57,7 @@ const getReceipts = unstable_cache(
     }))
   },
   ['receipts-list'],
-  { revalidate: 30, tags: ['receipts-list'] }
+  { revalidate: 30 }
 )
 
 export default async function ReceiptsPage() {

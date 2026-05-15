@@ -2,7 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 
 export async function GET() {
   const supabase = await createClient()
@@ -124,9 +124,6 @@ export async function PATCH(request: Request) {
   revalidatePath('/stock')
   revalidatePath('/receipts')
   revalidatePath('/orders') 
-  revalidateTag('stock-data')
-  revalidateTag('receipts-list')
-  revalidateTag('orders-list')
 
   return NextResponse.json({ success: true })
 }
