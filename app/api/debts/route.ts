@@ -76,7 +76,8 @@ export async function POST(request: Request) {
   return NextResponse.json(order, { status: 201 })
 }
 
-// ─── PATCH : marquer comme payé ───────────────────────────────────────────────
+// ─── PATCH : actions sur une dette ────────────────────────────────────────────
+// Body : { order_id, action?, amount?, extra_total?, extra_paid? }
 export async function PATCH(request: Request) {
   const supabase = await createClient()
   const admin = createAdminClient()
@@ -84,7 +85,7 @@ export async function PATCH(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { order_id, action, amount } = await request.json()
+  const { order_id, action, amount, extra_total, extra_paid = 0 } = await request.json()
   if (!order_id) return NextResponse.json({ error: 'order_id requis' }, { status: 400 })
 
   const { data: order, error: orderError } = await admin
@@ -113,6 +114,36 @@ export async function PATCH(request: Request) {
       .from('orders')
       .update({
         amount_paid: new_amount_paid,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('id', order_id)
+      .select('id, order_number, customer_name, customer_phone, status, total_amount, amount_paid, balance_due, created_at')
+      .single()
+
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+    revalidatePath('/debts')
+    return NextResponse.json({ updated })
+  }
+
+  // ── Ajout de dette ────────────────────────────────────────────────────────
+  if (action === 'add_debt') {
+    if (!extra_total || extra_total <= 0) {
+      return NextResponse.json({ error: 'Montant à ajouter invalide' }, { status: 400 })
+    }
+    if (extra_paid < 0 || extra_paid >= extra_total) {
+      return NextResponse.json(
+        { error: 'Le montant payé doit être inférieur au montant ajouté' },
+        { status: 400 }
+      )
+    }
+
+    const { data: updated, error: updateError } = await admin
+      .from('orders')
+      .update({
+        total_amount: order.total_amount + extra_total,
+        amount_paid: order.amount_paid + extra_paid,
         updated_by: user.id,
         updated_at: new Date().toISOString(),
       } as any)

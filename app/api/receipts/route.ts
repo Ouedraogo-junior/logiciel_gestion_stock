@@ -1,8 +1,8 @@
+// app/api/receipts/route.ts
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
-
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function GET() {
   const supabase = await createClient()
@@ -34,13 +34,13 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = await createClient()
   const admin = createAdminClient()
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
   const { order_id, stamp_type } = await request.json()
   if (!order_id) return NextResponse.json({ error: 'order_id requis' }, { status: 400 })
 
-  // Créer le reçu
   const { data: receipt, error } = await admin
     .from('receipts')
     .insert({
@@ -52,9 +52,9 @@ export async function POST(request: Request) {
     } as any)
     .select('id, receipt_number')
     .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Récupérer order complet
   const { data: order } = await admin
     .from('orders')
     .select(`
@@ -68,13 +68,11 @@ export async function POST(request: Request) {
     .eq('id', order_id)
     .single()
 
-  // Récupérer shop
   const { data: shop } = await admin
     .from('shop_settings')
     .select('name, phone, email, address, logo_url')
     .single()
 
-  // Récupérer seller
   const { data: profile } = await admin
     .from('profiles')
     .select('full_name')
@@ -90,4 +88,45 @@ export async function POST(request: Request) {
     shop,
     seller_name: profile?.full_name ?? null,
   }, { status: 201 })
+}
+
+// ─── PATCH : retour de marchandise ────────────────────────────────────────────
+// Body : { order_id, receipt_id, items: [{ variant_id, quantity }] }
+export async function PATCH(request: Request) {
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+
+  const { order_id, receipt_id, items } = await request.json()
+
+  if (!order_id) return NextResponse.json({ error: 'order_id requis' }, { status: 400 })
+  if (!receipt_id) return NextResponse.json({ error: 'receipt_id requis' }, { status: 400 })
+  if (!items?.length) return NextResponse.json({ error: 'Aucun article à retourner' }, { status: 400 })
+
+  const movements = items
+    .filter((i: { variant_id: string; quantity: number }) => i.quantity > 0)
+    .map((i: { variant_id: string; quantity: number }) => ({
+      variant_id: i.variant_id,
+      type: 'IN' as const,
+      quantity: i.quantity,
+      reason: 'Retour',
+      reference_id: receipt_id,
+      created_by: user.id,
+    }))
+
+  if (!movements.length) return NextResponse.json({ error: 'Quantités invalides' }, { status: 400 })
+
+  const { error } = await admin.from('stock_movements').insert(movements)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  revalidatePath('/stock')
+  revalidatePath('/receipts')
+  revalidatePath('/orders') 
+  revalidateTag('stock-data')
+  revalidateTag('receipts-list')
+  revalidateTag('orders-list')
+
+  return NextResponse.json({ success: true })
 }

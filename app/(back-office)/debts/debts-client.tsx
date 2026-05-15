@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import Skeleton from '@/components/skeleton'
 
 const ReceiptModal = dynamic(() => import('@/components/receipt-modal'), { ssr: false })
 
@@ -52,14 +51,23 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
   const [receiptData, setReceiptData]   = useState<ReceiptData | null>(null)
 
   // ── Formulaire dette manuelle ──
-  const [showForm, setShowForm]   = useState(false)
-  const [form, setForm]           = useState(EMPTY_FORM)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [showForm, setShowForm]     = useState(false)
+  const [form, setForm]             = useState(EMPTY_FORM)
+  const [formError, setFormError]   = useState<string | null>(null)
   const [formLoading, setFormLoading] = useState(false)
-  const [advanceModal, setAdvanceModal] = useState<{ debt: Debt } | null>(null)
+
+  // ── Modal avance ──
+  const [advanceModal, setAdvanceModal]     = useState<{ debt: Debt } | null>(null)
   const [advanceAmount, setAdvanceAmount]   = useState('')
   const [advanceError, setAdvanceError]     = useState<string | null>(null)
   const [advanceLoading, setAdvanceLoading] = useState(false)
+
+  // ── Modal ajout de dette ──
+  const [addDebtModal, setAddDebtModal]       = useState<{ debt: Debt } | null>(null)
+  const [addDebtTotal, setAddDebtTotal]       = useState('')
+  const [addDebtPaid, setAddDebtPaid]         = useState('')
+  const [addDebtError, setAddDebtError]       = useState<string | null>(null)
+  const [addDebtLoading, setAddDebtLoading]   = useState(false)
 
   const filtered = debts.filter(d => {
     const matchSearch = d.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -138,12 +146,40 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
 
     if (!res.ok) return setAdvanceError(data.error)
 
-    // Mettre à jour localement
     setDebts(prev => prev.map(d =>
       d.id === advanceModal.debt.id ? { ...d, ...data.updated } : d
     ))
     setAdvanceModal(null)
     setAdvanceAmount('')
+  }
+
+  async function submitAddDebt() {
+    if (!addDebtModal) return
+    const extra_total = parseFloat(addDebtTotal)
+    const extra_paid  = parseFloat(addDebtPaid || '0')
+
+    if (!addDebtTotal || extra_total <= 0) return setAddDebtError('Montant à ajouter invalide')
+    if (extra_paid < 0 || extra_paid >= extra_total) return setAddDebtError('Le montant payé doit être inférieur au montant ajouté')
+
+    setAddDebtLoading(true)
+    setAddDebtError(null)
+
+    const res = await fetch('/api/debts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: addDebtModal.debt.id, action: 'add_debt', extra_total, extra_paid }),
+    })
+    const data = await res.json()
+    setAddDebtLoading(false)
+
+    if (!res.ok) return setAddDebtError(data.error)
+
+    setDebts(prev => prev.map(d =>
+      d.id === addDebtModal.debt.id ? { ...d, ...data.updated } : d
+    ))
+    setAddDebtModal(null)
+    setAddDebtTotal('')
+    setAddDebtPaid('')
   }
 
   return (
@@ -238,6 +274,12 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-2 justify-end">
                     <button
+                      onClick={() => { setAddDebtModal({ debt: d }); setAddDebtTotal(''); setAddDebtPaid(''); setAddDebtError(null) }}
+                      className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition"
+                    >
+                      + Dette
+                    </button>
+                    <button
                       onClick={() => { setAdvanceModal({ debt: d }); setAdvanceAmount(''); setAdvanceError(null) }}
                       className="text-xs bg-orange-500 text-white px-3 py-1.5 rounded-lg hover:bg-orange-600 transition"
                     >
@@ -279,19 +321,27 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
               <div><p className="text-gray-400">Payé</p><p className="font-medium text-green-600">{d.amount_paid.toLocaleString()}</p></div>
               <div><p className="text-gray-400">Reste</p><p className="font-medium text-red-600">{(d.balance_due ?? 0).toLocaleString()}</p></div>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-gray-400">
                 {d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', {
                   day: '2-digit', month: 'short', year: 'numeric'
                 }) : '—'}
               </p>
-              <button
-                onClick={() => markAsPaid(d)}
-                disabled={loadingId === d.id}
-                className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
-              >
-                {loadingId === d.id ? '...' : '✓ Payé'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setAddDebtModal({ debt: d }); setAddDebtTotal(''); setAddDebtPaid(''); setAddDebtError(null) }}
+                  className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 transition"
+                >
+                  + Dette
+                </button>
+                <button
+                  onClick={() => markAsPaid(d)}
+                  disabled={loadingId === d.id}
+                  className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+                >
+                  {loadingId === d.id ? '...' : '✓ Payé'}
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -403,6 +453,7 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
         />
       )}
 
+      {/* Modal : avance */}
       {advanceModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
@@ -451,6 +502,83 @@ export default function DebtsClient({ initialDebts }: { initialDebts: Debt[] }) 
               </button>
               <button
                 onClick={() => { setAdvanceModal(null); setAdvanceAmount(''); setAdvanceError(null) }}
+                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal : ajout de dette */}
+      {addDebtModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            {addDebtLoading && (
+              <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Ajouter une dette</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {addDebtModal.debt.customer_name} — Reste dû actuel :{' '}
+              <span className="font-semibold text-red-600">
+                {(addDebtModal.debt.balance_due ?? 0).toLocaleString()} FCFA
+              </span>
+            </p>
+
+            <div className="flex flex-col gap-3 mb-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Montant de la nouvelle dette *</label>
+                <input
+                  type="number"
+                  min="0"
+                  autoFocus
+                  value={addDebtTotal}
+                  onChange={e => setAddDebtTotal(e.target.value)}
+                  placeholder="Ex. 50000"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Avance versée</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={addDebtPaid}
+                  onChange={e => setAddDebtPaid(e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+
+            {addDebtTotal && parseFloat(addDebtTotal) > 0 && (
+              <p className="text-xs text-gray-500 mb-3">
+                Nouveau solde total :{' '}
+                <span className="font-semibold text-red-600">
+                  {(
+                    (addDebtModal.debt.balance_due ?? 0) +
+                    parseFloat(addDebtTotal) -
+                    parseFloat(addDebtPaid || '0')
+                  ).toLocaleString()} FCFA
+                </span>
+              </p>
+            )}
+
+            {addDebtError && <p className="text-sm text-red-600 mb-3">{addDebtError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={submitAddDebt}
+                disabled={addDebtLoading}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition"
+              >
+                Confirmer
+              </button>
+              <button
+                onClick={() => { setAddDebtModal(null); setAddDebtTotal(''); setAddDebtPaid(''); setAddDebtError(null) }}
                 className="flex-1 py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition"
               >
                 Annuler

@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 type VariantInput = {
   storage: string
@@ -80,6 +80,7 @@ export async function POST(request: Request) {
   }
 
   revalidatePath('/products')
-
+  revalidateTag('stock-data')
+  
   return NextResponse.json({ id: product.id }, { status: 201 })
 }

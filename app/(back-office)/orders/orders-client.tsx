@@ -14,6 +14,7 @@ type Order = {
   balance_due: number
   created_at: string
   creator: { full_name: string } | null
+  returned_qty: number
 }
 
 const STATUS_LABELS = {
@@ -110,6 +111,11 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{o.customer_name}</p>
                   {o.customer_phone && <p className="text-xs text-gray-400">{o.customer_phone}</p>}
+                  {o.returned_qty > 0 && (
+                    <p className="text-xs text-orange-600 font-medium mt-0.5">
+                      ↩ {o.returned_qty} retourné{o.returned_qty > 1 ? 's' : ''}
+                    </p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[o.status].class}`}>
@@ -148,8 +154,13 @@ export default function OrdersClient({ initialOrders }: { initialOrders: Order[]
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="font-medium text-gray-900">{o.customer_name}</p>
-                {o.customer_phone && <p className="text-xs text-gray-400">{o.customer_phone}</p>}
-                <p className="font-mono text-xs text-gray-400 mt-0.5">{o.order_number}</p>
+                  {o.customer_phone && <p className="text-xs text-gray-400">{o.customer_phone}</p>}
+                  <p className="font-mono text-xs text-gray-400 mt-0.5">{o.order_number}</p>
+                  {o.returned_qty > 0 && (
+                    <p className="text-xs text-orange-600 font-medium mt-0.5">
+                      ↩ {o.returned_qty} retourné{o.returned_qty > 1 ? 's' : ''}
+                    </p>
+                  )}
               </div>
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[o.status].class}`}>
                 {STATUS_LABELS[o.status].label}

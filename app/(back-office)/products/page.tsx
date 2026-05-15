@@ -9,7 +9,7 @@ const getProducts = unstable_cache(
   async () => {
     const admin = createAdminClient()
 
-    const { data: rawProducts, error } = await admin
+    const { data: rawProducts } = await admin
       .from('products')
       .select(`
         id, name, brand, category, is_public, is_archived, created_at, created_by,
@@ -18,15 +18,28 @@ const getProducts = unstable_cache(
       .eq('is_archived', false)
       .order('created_at', { ascending: false })
 
-      //  console.log('Products count:', rawProducts?.length)  // ← ajoute ça
-      // console.log('Error:', error)   
+    const products = rawProducts ?? []
 
-    return rawProducts ?? []
+    const creatorIds = [...new Set(products.map((p: any) => p.created_by).filter(Boolean))]
+
+    const { data: rawProfiles } = await admin
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', creatorIds as string[])
+
+    const profileMap = Object.fromEntries(
+      (rawProfiles ?? []).map((p: any) => [p.id, p.full_name])
+    )
+
+    return products.map((p: any) => ({
+      ...p,
+      creator: { full_name: profileMap[p.created_by ?? ''] ?? '—' }
+    }))
   },
-  ['products-list'],          // clé de cache unique
+  ['products-list'],
   {
-    revalidate: 60,           // revalide toutes les 60 secondes
-    tags: ['products'],       // tag pour invalidation manuelle
+    revalidate: 60,
+    tags: ['products'],
   }
 )
 

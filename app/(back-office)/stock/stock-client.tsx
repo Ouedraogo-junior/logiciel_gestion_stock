@@ -59,6 +59,9 @@ export default function StockClient({
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const { setNavigating } = useNavigation()
+  const [showVariantPicker, setShowVariantPicker] = useState(false)
+  const [showAllLowStock, setShowAllLowStock] = useState(false)
+
 
   const reasons = form.type === 'IN' ? REASONS_IN : REASONS_OUT
 
@@ -125,20 +128,27 @@ export default function StockClient({
         </button>
       </div>
 
-      {/* Alertes stock faible */}
       {lowStock.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
           <p className="text-sm font-semibold text-amber-800 mb-2">
             ⚠ {lowStock.length} variante{lowStock.length > 1 ? 's' : ''} en stock faible
           </p>
           <div className="space-y-1">
-            {lowStock.map(v => (
+            {(showAllLowStock ? lowStock : lowStock.slice(0, 3)).map(v => (
               <div key={v.id} className="flex items-center justify-between text-xs text-amber-700">
                 <span className="truncate mr-2">{v.products?.name} {v.storage && `· ${v.storage}`} {v.color && `· ${v.color}`} ({v.sku})</span>
                 <span className="font-bold shrink-0">{v.stock_qty} restant{v.stock_qty > 1 ? 's' : ''}</span>
               </div>
             ))}
           </div>
+          {lowStock.length > 3 && (
+            <button
+              onClick={() => setShowAllLowStock(s => !s)}
+              className="mt-2 text-xs text-amber-700 font-medium hover:underline"
+            >
+              {showAllLowStock ? 'Voir moins ↑' : `Voir ${lowStock.length - 3} de plus ↓`}
+            </button>
+          )}
         </div>
       )}
 
@@ -155,21 +165,17 @@ export default function StockClient({
           )}
           <h2 className="font-semibold text-gray-800">Nouveau mouvement</h2>
           <div>
-            <label className="text-xs font-medium text-gray-600">Rechercher un produit</label>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Nom, SKU, couleur..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div>
             <label className="text-xs font-medium text-gray-600">Variante *</label>
-            <select required value={form.variant_id}
-              onChange={e => setForm(f => ({ ...f, variant_id: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Sélectionner une variante</option>
-              {filteredVariants.map(v => (
-                <option key={v.id} value={v.id}>{variantLabel(v)} — {v.stock_qty} en stock</option>
-              ))}
-            </select>
+            <button
+              type="button"
+              onClick={() => setShowVariantPicker(true)}
+              className="w-full mt-1 bg-blue-600 text-white rounded-lg px-3 py-2 text-sm text-left font-medium hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {form.variant_id
+                ? variantLabel(variants.find(v => v.id === form.variant_id)!)
+                : <span className="text-blue-200">Sélectionner une variante...</span>
+              }
+            </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
@@ -308,6 +314,62 @@ export default function StockClient({
           ))}
         </div>
       </div>
+
+      {/* Variant Picker Modal */}
+      {showVariantPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl flex flex-col max-h-[70vh]">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800 mb-3">Choisir une variante</h3>
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Nom, SKU, couleur..."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="overflow-y-auto flex-1 divide-y divide-gray-100">
+              {filteredVariants.length === 0 ? (
+                <p className="text-center py-8 text-gray-400 text-sm">Aucun résultat</p>
+              ) : filteredVariants.map(v => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    setForm(f => ({ ...f, variant_id: v.id }))
+                    setShowVariantPicker(false)
+                    setSearch('')
+                  }}
+                  className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition ${
+                    form.variant_id === v.id ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <p className="text-sm font-medium text-gray-900">{v.products?.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {[v.products?.brand, v.storage, v.color, v.condition].filter(Boolean).join(' · ')} · {v.sku}
+                  </p>
+                  <p className={`text-xs font-medium mt-0.5 ${
+                    v.alert_threshold !== null && v.stock_qty <= v.alert_threshold
+                      ? 'text-amber-600' : 'text-gray-500'
+                  }`}>
+                    {v.stock_qty} en stock
+                  </p>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { setShowVariantPicker(false); setSearch('') }}
+                className="w-full py-2 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

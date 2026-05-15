@@ -48,7 +48,7 @@ const getStockData = unstable_cache(
   },
   ['stock-data'],
   {
-    revalidate: 30,  // 30s car le stock change plus souvent
+    revalidate: 30, tags: ['stock-data'] // 30s car le stock change plus souvent
   }
 )
 

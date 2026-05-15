@@ -11,6 +11,7 @@ type Receipt = {
   generated_at: string
   generated_by: string | null
   seller_name: string | null
+  returned_qty: number
   orders: {
     id: string
     order_number: string
@@ -19,6 +20,17 @@ type Receipt = {
     total_amount: number
     amount_paid: number
     balance_due: number
+    order_items: {
+      id: string
+      quantity: number
+      product_variants: {
+        id: string
+        sku: string
+        color: string | null
+        storage: string | null
+        products: { name: string } | null
+      } | null
+    }[]
   } | null
 }
 
@@ -36,16 +48,27 @@ const STAMP_LABELS = {
   NONE:      { label: 'Aucun', class: 'bg-gray-100 text-gray-600'  },
 }
 
-export default function ReceiptsClient({ initialReceipts }: { initialReceipts: Receipt[] }) {
-  const [search, setSearch] = useState('')
-  const [filterStamp, setFilterStamp] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
+function totalSold(r: Receipt) {
+  return r.orders?.order_items.reduce((s, i) => s + i.quantity, 0) ?? 0
+}
 
-  const filtered = initialReceipts.filter(r => {
+export default function ReceiptsClient({ initialReceipts }: { initialReceipts: Receipt[] }) {
+  const [receipts, setReceipts]         = useState<Receipt[]>(initialReceipts)
+  const [search, setSearch]             = useState('')
+  const [filterStamp, setFilterStamp]   = useState('')
+  const [dateFrom, setDateFrom]         = useState('')
+  const [dateTo, setDateTo]             = useState('')
+  const [loadingId, setLoadingId]       = useState<string | null>(null)
+  const [error, setError]               = useState<string | null>(null)
+  const [receiptData, setReceiptData]   = useState<ReceiptData | null>(null)
+
+  // ── Modal retour ──
+  const [returnModal, setReturnModal]     = useState<{ receipt: Receipt } | null>(null)
+  const [returnQtys, setReturnQtys]       = useState<Record<string, number>>({})
+  const [returnError, setReturnError]     = useState<string | null>(null)
+  const [returnLoading, setReturnLoading] = useState(false)
+
+  const filtered = receipts.filter(r => {
     const matchSearch =
       r.receipt_number.toLowerCase().includes(search.toLowerCase()) ||
       r.orders?.customer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -71,10 +94,47 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
     setLoadingId(null)
   }
 
+  async function submitReturn() {
+    if (!returnModal?.receipt.orders) return
+    setReturnError(null)
+
+    const items = returnModal.receipt.orders.order_items
+      .filter(item => item.product_variants && (returnQtys[item.id] ?? 0) > 0)
+      .map(item => ({
+        variant_id: item.product_variants!.id,
+        quantity: returnQtys[item.id],
+      }))
+
+    if (!items.length) return setReturnError('Sélectionnez au moins un article')
+
+    setReturnLoading(true)
+    const res = await fetch('/api/receipts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id: returnModal.receipt.orders.id,
+        receipt_id: returnModal.receipt.id,
+        items,
+      }),
+    })
+    const data = await res.json()
+    setReturnLoading(false)
+
+    if (!res.ok) return setReturnError(data.error)
+
+    const totalReturned = Object.values(returnQtys).reduce((s, q) => s + q, 0)
+    setReceipts(prev => prev.map(r =>
+      r.id === returnModal.receipt.id
+        ? { ...r, returned_qty: r.returned_qty + totalReturned }
+        : r
+    ))
+    setReturnModal(null)
+    setReturnQtys({})
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
 
-      {/* ── Overlay spinner ── */}
       {loadingId && (
         <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
@@ -90,18 +150,18 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500">Total reçus</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{initialReceipts.length}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{receipts.length}</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <p className="text-xs text-green-600">Reçus Payé</p>
           <p className="text-2xl font-bold text-green-700 mt-1">
-            {initialReceipts.filter(r => r.stamp_type === 'PAID').length}
+            {receipts.filter(r => r.stamp_type === 'PAID').length}
           </p>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <p className="text-xs text-blue-600">Reçus Livré</p>
           <p className="text-2xl font-bold text-blue-700 mt-1">
-            {initialReceipts.filter(r => r.stamp_type === 'DELIVERED').length}
+            {receipts.filter(r => r.stamp_type === 'DELIVERED').length}
           </p>
         </div>
       </div>
@@ -165,13 +225,33 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                   })}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => reprint(r)}
-                    disabled={!!loadingId}
-                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-                  >
-                    🖨 Réimprimer
-                  </button>
+                  <div className="flex flex-col items-end gap-1.5">
+                    {r.returned_qty > 0 && (
+                      <span className="text-xs text-orange-600 font-medium">
+                        ↩ {r.returned_qty}/{totalSold(r)} retourné{r.returned_qty > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setReturnModal({ receipt: r }); setReturnQtys({}); setReturnError(null) }}
+                        disabled={!!loadingId || r.returned_qty >= totalSold(r)}
+                        className={`text-xs px-3 py-1.5 rounded-lg transition ${
+                          r.returned_qty >= totalSold(r)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50'
+                        }`}
+                      >
+                        ↩ Retour
+                      </button>
+                      <button
+                        onClick={() => reprint(r)}
+                        disabled={!!loadingId}
+                        className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                      >
+                        🖨 Réimprimer
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -205,6 +285,11 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 <p className="font-medium text-gray-900">{r.seller_name ?? '—'}</p>
               </div>
             </div>
+            {r.returned_qty > 0 && (
+              <p className="text-xs text-orange-600 font-medium mb-2">
+                ↩ {r.returned_qty}/{totalSold(r)} retourné{r.returned_qty > 1 ? 's' : ''}
+              </p>
+            )}
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
                 {new Date(r.generated_at).toLocaleDateString('fr-FR', {
@@ -212,13 +297,26 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                   hour: '2-digit', minute: '2-digit'
                 })}
               </p>
-              <button
-                onClick={() => reprint(r)}
-                disabled={!!loadingId}
-                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-              >
-                🖨 Réimprimer
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setReturnModal({ receipt: r }); setReturnQtys({}); setReturnError(null) }}
+                  disabled={!!loadingId || r.returned_qty >= totalSold(r)}
+                  className={`text-xs px-3 py-1.5 rounded-lg transition ${
+                    r.returned_qty >= totalSold(r)
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50'
+                  }`}
+                >
+                  ↩ Retour
+                </button>
+                <button
+                  onClick={() => reprint(r)}
+                  disabled={!!loadingId}
+                  className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                >
+                  🖨 Réimprimer
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -233,6 +331,70 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
           seller_name={receiptData.seller_name}
           onClose={() => setReceiptData(null)}
         />
+      )}
+
+      {/* Modal retour */}
+      {returnModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            {returnLoading && (
+              <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Retour de marchandise</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {returnModal.receipt.orders?.customer_name} — {returnModal.receipt.receipt_number}
+            </p>
+
+            <div className="flex flex-col gap-3 mb-4">
+              {returnModal.receipt.orders?.order_items.map(item => {
+                const v = item.product_variants
+                if (!v) return null
+                const label = [v.products?.name, v.storage, v.color].filter(Boolean).join(' · ')
+                const alreadyReturned = returnModal.receipt.returned_qty
+                const remaining = item.quantity - Math.min(alreadyReturned, item.quantity)
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{label}</p>
+                      <p className="text-xs text-gray-400">
+                        {v.sku} — vendu : {item.quantity}{remaining < item.quantity ? ` · retournable : ${remaining}` : ''}
+                      </p>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      max={remaining}
+                      value={returnQtys[item.id] ?? 0}
+                      onChange={e => setReturnQtys(q => ({ ...q, [item.id]: parseInt(e.target.value) || 0 }))}
+                      disabled={remaining === 0}
+                      className="w-16 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50 disabled:text-gray-400"
+                    />
+                  </div>
+                )
+              })}
+            </div>
+
+            {returnError && <p className="text-sm text-red-600 mb-3">{returnError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={submitReturn}
+                disabled={returnLoading}
+                className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition"
+              >
+                Confirmer le retour
+              </button>
+              <button
+                onClick={() => { setReturnModal(null); setReturnQtys({}); setReturnError(null) }}
+                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-300 hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

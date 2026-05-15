@@ -260,7 +260,11 @@ type Props = {
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
 function formatMoney(n: number) {
-  return n.toLocaleString('fr-FR') + ' F'
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F'
+}
+
+function formatNumber(n: number) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
 function numberToWords(n: number): string {
@@ -407,10 +411,10 @@ export function ReceiptDocument({ order, receipt_number, shop, seller_name, stam
                   <Text style={styles.cellTextCenter}>{item.quantity}</Text>
                 </View>
                 <View style={styles.colPU}>
-                  <Text style={styles.cellTextRight}>{item.unit_price.toLocaleString('fr-FR')}</Text>
+                  <Text style={styles.cellTextRight}>{formatNumber(item.unit_price)}</Text>
                 </View>
                 <View style={styles.colMontant}>
-                  <Text style={styles.cellTextRight}>{item.subtotal.toLocaleString('fr-FR')} F</Text>
+                  <Text style={styles.cellTextRight}>{formatNumber(item.subtotal)} F</Text>
                 </View>
               </View>
             )
