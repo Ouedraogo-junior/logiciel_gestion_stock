@@ -1,3 +1,4 @@
+// app/(back-office)/orders/page.tsx
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { unstable_cache } from 'next/cache'

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useNavigation } from '@/components/navigation-context'
 const ReceiptModal = dynamic(() => import('@/components/receipt-modal'), { ssr: false })
@@ -35,26 +35,106 @@ type ReceiptData = {
 
 export default function NewOrderPage() {
   const router = useRouter()
-  const [variants, setVariants] = useState<Variant[]>([])
-  const [search, setSearch] = useState('')
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [form, setForm] = useState({
+  const searchParams = useSearchParams()
+  const editOrderId   = searchParams.get('edit')
+  const editReceiptId = searchParams.get('receipt')
+  const isEditMode    = !!editOrderId && !!editReceiptId
+
+  const [variants, setVariants]       = useState<Variant[]>([])
+  const [search, setSearch]           = useState('')
+  const [cart, setCart]               = useState<CartItem[]>([])
+  const [form, setForm]               = useState({
     customer_name: '',
     customer_phone: '',
     status: 'PAID' as 'PAID' | 'DELIVERED' | 'DEBT',
     amount_paid: '',
     notes: '',
   })
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loadingInit, setLoadingInit] = useState(isEditMode)
+  const [error, setError]             = useState<string | null>(null)
+  const [loading, setLoading]         = useState(false)
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
-  const { setNavigating } = useNavigation()
+  const { setNavigating }             = useNavigation()
 
+  // ── Charger les variantes disponibles ─────────────────────────────────────
   useEffect(() => {
     fetch('/api/products/variants')
       .then(r => r.json())
       .then(setVariants)
   }, [])
+
+  // ── En mode édition : pré-remplir le formulaire depuis la commande ─────────
+  useEffect(() => {
+    if (!isEditMode) return
+
+    fetch(`/api/orders/${editOrderId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { setError(data.error); setLoadingInit(false); return }
+
+        setForm({
+          customer_name:  data.customer_name  ?? '',
+          customer_phone: data.customer_phone ?? '',
+          status:         data.status         ?? 'PAID',
+          amount_paid:    String(data.amount_paid ?? ''),
+          notes:          data.notes          ?? '',
+        })
+
+        // Reconstruire le panier depuis order_items
+        type RawItem = {
+          variant_id: string
+          quantity: number
+          unit_price: number
+          discount: number
+          product_variants?: {
+            sku: string
+            color: string | null
+            storage: string | null
+            products?: { name: string } | null
+          } | null
+        }
+
+        const rawItems: RawItem[] = data.order_items ?? []
+
+        setCart(rawItems.map(item => {
+          // Enrichir depuis variants déjà chargées si dispo
+          const found = variants.find(v => v.id === item.variant_id)
+          if (found) {
+            return { variant: found, quantity: item.quantity, unit_price: item.unit_price, discount: item.discount }
+          }
+          // Placeholder minimal depuis product_variants jointé par l'API
+          const pv = item.product_variants
+          return {
+            variant: {
+              id: item.variant_id,
+              sku:        pv?.sku      ?? '',
+              color:      pv?.color    ?? null,
+              storage:    pv?.storage  ?? null,
+              condition:  null,
+              sell_price: item.unit_price,
+              stock_qty:  9999,
+              products:   { name: pv?.products?.name ?? 'Article', brand: null },
+            },
+            quantity:   item.quantity,
+            unit_price: item.unit_price,
+            discount:   item.discount,
+          }
+        }))
+
+        setLoadingInit(false)
+      })
+      .catch(() => { setError('Erreur lors du chargement de la commande'); setLoadingInit(false) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editOrderId])
+
+  // ── Enrichir les items placeholder une fois les variantes chargées ─────────
+  useEffect(() => {
+    if (!isEditMode || !variants.length) return
+    setCart(prev => prev.map(item => {
+      const found = variants.find(v => v.id === item.variant.id)
+      return found ? { ...item, variant: found } : item
+    }))
+  }, [variants, isEditMode])
 
   const filtered = variants.filter(v => {
     const label = [v.products?.name, v.products?.brand, v.sku, v.color, v.storage]
@@ -68,8 +148,7 @@ export default function NewOrderPage() {
       if (existing) {
         return c.map(i => i.variant.id === variant.id
           ? { ...i, quantity: i.quantity + 1 }
-          : i
-        )
+          : i)
       }
       return [...c, { variant, quantity: 1, unit_price: variant.sell_price, discount: 0 }]
     })
@@ -84,9 +163,9 @@ export default function NewOrderPage() {
     setCart(c => c.filter(i => i.variant.id !== variantId))
   }
 
-  const total = cart.reduce((s, i) => s + (i.quantity * i.unit_price - i.discount), 0)
+  const total      = cart.reduce((s, i) => s + (i.quantity * i.unit_price - i.discount), 0)
   const amountPaid = parseFloat(form.amount_paid) || 0
-  const balance = total - amountPaid
+  const balance    = total - amountPaid
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -94,38 +173,57 @@ export default function NewOrderPage() {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-        ...form,
-        items: cart.map(i => ({
-            variant_id: i.variant.id,
-            quantity: i.quantity,
-            unit_price: i.unit_price,
-            discount: i.discount,
-        })),
-        }),
-    })
+    const payload = {
+      ...form,
+      items: cart.map(i => ({
+        variant_id: i.variant.id,
+        quantity:   i.quantity,
+        unit_price: i.unit_price,
+        discount:   i.discount,
+      })),
+    }
+
+    const res = isEditMode
+      ? await fetch('/api/orders', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, order_id: editOrderId, receipt_id: editReceiptId }),
+        })
+      : await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
     const data = await res.json()
-    console.log('shop reçu:', data.shop) 
     if (!res.ok) { setError(data.error); setLoading(false); return }
     setReceiptData(data)
     setLoading(false)
-    }
+  }
 
-    if (receiptData) {
-        return (
-            <ReceiptModal
-            order={receiptData.order}
-            shop={receiptData.shop}
-            receipt_number={receiptData.receipt_number}
-            stamp_type={receiptData.stamp_type}
-            seller_name={receiptData.seller_name}
-            onClose={() => router.push('/orders')}
-            />
-        )
-        }
+  if (receiptData) {
+    return (
+      <ReceiptModal
+        order={receiptData.order}
+        shop={receiptData.shop}
+        receipt_number={receiptData.receipt_number}
+        stamp_type={receiptData.stamp_type}
+        seller_name={receiptData.seller_name}
+        onClose={() => router.push('/receipts')}
+      />
+    )
+  }
+
+  if (loadingInit) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
+        <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-gray-700">Chargement de la commande...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -133,13 +231,25 @@ export default function NewOrderPage() {
         <div className="fixed inset-0 z-50 bg-white/60 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white border border-gray-200 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-lg">
             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium text-gray-700">Enregistrement en cours...</p>
+            <p className="text-sm font-medium text-gray-700">
+              {isEditMode ? 'Mise à jour en cours...' : 'Enregistrement en cours...'}
+            </p>
           </div>
         </div>
       )}
+
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => { setNavigating(true); router.back() }} className="text-gray-400 hover:text-gray-600 text-sm">← Retour</button>
-        <h1 className="text-xl font-bold text-gray-900">Nouvelle vente</h1>
+        <button onClick={() => { setNavigating(true); router.back() }} className="text-gray-400 hover:text-gray-600 text-sm">
+          ← Retour
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">
+          {isEditMode ? 'Modifier la vente' : 'Nouvelle vente'}
+        </h1>
+        {isEditMode && (
+          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+            Modification — l{"'"}ancien reçu sera annulé
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-5 gap-5">
@@ -287,7 +397,9 @@ export default function NewOrderPage() {
 
           <button onClick={handleSubmit} disabled={loading || cart.length === 0}
             className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition">
-            {loading ? 'Enregistrement...' : 'Valider la vente'}
+            {loading
+              ? (isEditMode ? 'Mise à jour...' : 'Enregistrement...')
+              : (isEditMode ? 'Valider la modification' : 'Valider la vente')}
           </button>
         </div>
       </div>

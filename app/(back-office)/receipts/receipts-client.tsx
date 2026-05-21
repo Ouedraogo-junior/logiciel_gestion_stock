@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const ReceiptModal = dynamic(() => import('@/components/receipt-modal'), { ssr: false })
@@ -53,6 +54,7 @@ function totalSold(r: Receipt) {
 }
 
 export default function ReceiptsClient({ initialReceipts }: { initialReceipts: Receipt[] }) {
+  const router = useRouter()
   const [receipts, setReceipts]         = useState<Receipt[]>(initialReceipts)
   const [search, setSearch]             = useState('')
   const [filterStamp, setFilterStamp]   = useState('')
@@ -92,6 +94,11 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
     if (!res.ok) { setError(data.error); setLoadingId(null); return }
     setReceiptData(data)
     setLoadingId(null)
+  }
+
+  function openEdit(receipt: Receipt) {
+    if (!receipt.orders) return
+    router.push(`/orders/new?edit=${receipt.orders.id}&receipt=${receipt.id}`)
   }
 
   async function submitReturn() {
@@ -233,6 +240,13 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                     )}
                     <div className="flex gap-2">
                       <button
+                        onClick={() => openEdit(r)}
+                        disabled={!!loadingId}
+                        className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition"
+                      >
+                        ✏️ Modifier
+                      </button>
+                      <button
                         onClick={() => { setReturnModal({ receipt: r }); setReturnQtys({}); setReturnError(null) }}
                         disabled={!!loadingId || r.returned_qty >= totalSold(r)}
                         className={`text-xs px-3 py-1.5 rounded-lg transition ${
@@ -298,6 +312,13 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 })}
               </p>
               <div className="flex gap-2">
+                <button
+                  onClick={() => openEdit(r)}
+                  disabled={!!loadingId}
+                  className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 transition"
+                >
+                  ✏️ Modifier
+                </button>
                 <button
                   onClick={() => { setReturnModal({ receipt: r }); setReturnQtys({}); setReturnError(null) }}
                   disabled={!!loadingId || r.returned_qty >= totalSold(r)}

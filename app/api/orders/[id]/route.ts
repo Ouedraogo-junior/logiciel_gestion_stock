@@ -1,3 +1,4 @@
+// app/api/orders/[id]/route.ts
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -16,7 +17,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       id, order_number, customer_name, customer_phone,
       status, total_amount, amount_paid, balance_due, notes,
       created_at, updated_at,
-      order_items (id, quantity, unit_price, discount, subtotal,
+      order_items (id, variant_id, quantity, unit_price, discount, subtotal,
         product_variants (sku, color, storage, condition, products (name, brand))
       )
     `)
