@@ -123,6 +123,14 @@ export async function PATCH(request: Request) {
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
+    await admin.from('debt_payments').insert({
+      order_id,
+      amount,
+      payment_type: 'partial',
+      paid_by: user.id,
+      paid_at: new Date().toISOString(),
+    })
+
     revalidatePath('/debts')
     return NextResponse.json({ updated })
   }
@@ -169,6 +177,14 @@ export async function PATCH(request: Request) {
     .eq('id', order_id)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  await admin.from('debt_payments').insert({
+    order_id,
+    amount: order.balance_due,
+    payment_type: 'full',
+    paid_by: user.id,
+    paid_at: new Date().toISOString(),
+  })
 
   const { data: receipt, error: receiptError } = await admin
     .from('receipts')

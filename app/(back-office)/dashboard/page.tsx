@@ -12,22 +12,33 @@ const getDashboardData = unstable_cache(
     today.setHours(0, 0, 0, 0)
     const todayISO = today.toISOString()
 
-    const { data: todayOrders } = await admin
+    const [{ data: todayOrders }, { data: debts }, { data: debtPaymentsToday }, { data: topDebtPayers }] = await Promise.all([
+    admin
       .from('orders')
       .select('amount_paid')
       .eq('status', 'PAID')
       .gte('created_at', todayISO)
-      .returns<{ amount_paid: number }[]>()
-
-    const caToday = (todayOrders ?? []).reduce((s, o) => s + o.amount_paid, 0)
-
-    const { data: debts } = await admin
+      .returns<{ amount_paid: number }[]>(),
+    admin
       .from('orders')
       .select('balance_due')
       .in('status', ['DELIVERED', 'DEBT'])
-      .returns<{ balance_due: number }[]>()
+      .returns<{ balance_due: number }[]>(),
+    (admin as any)
+      .from('debt_payments')
+      .select('amount, payment_type')
+      .gte('paid_at', todayISO),
+    (admin as any)
+      .from('debt_payments')
+      .select('amount, payment_type, paid_at, orders(customer_name, customer_phone)')
+      .gte('paid_at', todayISO)
+      .order('amount', { ascending: false }),
+  ])
 
-    const totalDettes = (debts ?? []).reduce((s, o) => s + o.balance_due, 0)
+  const debtsPaidTodayAmount = (debtPaymentsToday ?? []).reduce((s: number, p: any) => s + p.amount, 0)
+  const debtsPaidTodayCount = (debtPaymentsToday ?? []).filter((p: any) => p.payment_type === 'full').length
+  const caToday = (todayOrders ?? []).reduce((s, o) => s + o.amount_paid, 0) + debtsPaidTodayAmount
+  const totalDettes = (debts ?? []).reduce((s, o) => s + o.balance_due, 0)
 
     const { data: lowStock } = await admin
       .from('product_variants')
@@ -54,7 +65,15 @@ const getDashboardData = unstable_cache(
       .slice(0, 5)
       .map(([name, qty]) => ({ name, qty }))
 
-    return { caToday, totalDettes, lowStock: lowStock ?? [], top5 }
+    return {
+      caToday,
+      totalDettes,
+      debtsPaidTodayAmount,
+      debtsPaidTodayCount,
+      topDebtPayers: topDebtPayers ?? [],
+      lowStock: lowStock ?? [],
+      top5,
+    }
   },
   ['dashboard-data'],
   { revalidate: 60 }

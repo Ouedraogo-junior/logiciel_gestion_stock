@@ -107,6 +107,55 @@ export type Database = {
         }
         Relationships: []
       }
+      debt_payments: {
+        Row: {
+          amount: number
+          id: string
+          order_id: string
+          paid_at: string
+          paid_by: string | null
+          payment_type: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          order_id: string
+          paid_at?: string
+          paid_by?: string | null
+          payment_type: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          order_id?: string
+          paid_at?: string
+          paid_by?: string | null
+          payment_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debt_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debt_payments_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           discount: number
@@ -365,9 +414,11 @@ export type Database = {
           order_id: string
           pdf_url: string | null
           receipt_number: string
+          replaced_by: string | null
           stamp_applied_at: string | null
           stamp_applied_by: string | null
           stamp_type: string
+          status: string
         }
         Insert: {
           generated_at?: string | null
@@ -376,9 +427,11 @@ export type Database = {
           order_id: string
           pdf_url?: string | null
           receipt_number: string
+          replaced_by?: string | null
           stamp_applied_at?: string | null
           stamp_applied_by?: string | null
           stamp_type?: string
+          status?: string
         }
         Update: {
           generated_at?: string | null
@@ -387,9 +440,11 @@ export type Database = {
           order_id?: string
           pdf_url?: string | null
           receipt_number?: string
+          replaced_by?: string | null
           stamp_applied_at?: string | null
           stamp_applied_by?: string | null
           stamp_type?: string
+          status?: string
         }
         Relationships: [
           {
@@ -404,6 +459,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "v_active_debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "receipts"
             referencedColumns: ["id"]
           },
         ]

@@ -119,6 +119,28 @@ export async function GET(request: Request) {
   const { count: totalVariants } = await admin
     .from('product_variants').select('*', { count: 'exact', head: true }).eq('is_archived', false)
 
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const todayISO = todayStart.toISOString()
+
+  const { data: todaySales } = await admin
+    .from('orders')
+    .select(`
+      id, order_number, customer_name, amount_paid, created_at,
+      order_items (
+        quantity, unit_price,
+        product_variants (products (name))
+      )
+    `)
+    .eq('status', 'PAID')
+    .gte('created_at', todayISO)
+    .order('created_at', { ascending: false })
+
+  const { data: todayDebtActivity } = await (admin as any)
+    .from('debt_payments')
+    .select('amount, payment_type, paid_at, orders(customer_name, order_number)')
+    .gte('paid_at', todayISO)
+    .order('paid_at', { ascending: false })
+
   return NextResponse.json({
     ca: { day: caDay, week: caWeek, month: caMonth, total: caTotal },
     orders: { paid: countPaid, delivered: countDelivered, debt: countDebt, total: (allOrders ?? []).length },
@@ -128,5 +150,7 @@ export async function GET(request: Request) {
     totalProducts: totalProducts ?? 0,
     totalVariants: totalVariants ?? 0,
     top10,
+    todaySales: todaySales ?? [],
+    todayDebtActivity: todayDebtActivity ?? [],
   })
 }

@@ -16,9 +16,18 @@ type TopProduct = {
   qty: number
 }
 
+type TopDebtPayer = {
+  amount: number
+  payment_type: string
+  orders: { customer_name: string; customer_phone: string | null } | null
+}
+
 type DashboardData = {
   caToday: number
   totalDettes: number
+  debtsPaidTodayAmount: number
+  debtsPaidTodayCount: number
+  topDebtPayers: TopDebtPayer[]
   lowStock: LowStockItem[]
   top5: TopProduct[]
 }
@@ -32,14 +41,20 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       <h1 className="text-xl font-bold text-gray-900">Tableau de bord</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="bg-green-50 border border-green-200 rounded-xl p-5">
           <p className="text-xs text-green-600 font-medium">CA du jour</p>
           <p className="text-3xl font-bold text-green-700 mt-1">
             {initialData.caToday.toLocaleString()}
           </p>
           <p className="text-xs text-green-500 mt-1">FCFA encaissés aujourd{"'"}hui</p>
+          {initialData.debtsPaidTodayAmount > 0 && (
+            <p className="text-xs text-green-400 mt-0.5">
+              dont {initialData.debtsPaidTodayAmount.toLocaleString()} FCFA recouvrés
+            </p>
+          )}
         </div>
+
         <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <p className="text-xs text-red-600 font-medium">Dettes actives</p>
           <p className="text-3xl font-bold text-red-700 mt-1">
@@ -53,6 +68,19 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             >
               Voir les dettes →
             </button>
+          )}
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+          <p className="text-xs text-blue-600 font-medium">Recouvrements du jour</p>
+          <p className="text-3xl font-bold text-blue-700 mt-1">
+            {initialData.debtsPaidTodayAmount.toLocaleString()}
+          </p>
+          <p className="text-xs text-blue-500 mt-1">FCFA encaissés sur dettes</p>
+          {initialData.debtsPaidTodayCount > 0 && (
+            <p className="text-xs text-blue-400 mt-0.5">
+              {initialData.debtsPaidTodayCount} dette{initialData.debtsPaidTodayCount > 1 ? 's' : ''} soldée{initialData.debtsPaidTodayCount > 1 ? 's' : ''} aujourd{"'"}hui
+            </p>
           )}
         </div>
       </div>
@@ -84,6 +112,31 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
           </div>
         )}
       </div>
+
+      {/* Recouvrements du jour */}
+      {initialData.topDebtPayers.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h2 className="font-semibold text-gray-800 mb-4">Remboursements du jour</h2>
+          <div className="space-y-3">
+            {initialData.topDebtPayers.map((p, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{p.orders?.customer_name}</p>
+                  {p.orders?.customer_phone && (
+                    <p className="text-xs text-gray-400">{p.orders.customer_phone}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-blue-600">{p.amount.toLocaleString()} FCFA</p>
+                  <p className="text-xs text-gray-400">
+                    {p.payment_type === 'full' ? 'Soldé' : 'Avance'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alertes stock faible */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">

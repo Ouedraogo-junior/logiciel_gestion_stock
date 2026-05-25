@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+import DayActivity, { SaleItem, DebtActivity } from '@/components/stats/DayActivity'
+
 type Period = { type: 'month'; year: number; month: number } | { type: 'year'; year: number }
 
 type StatsData = {
@@ -12,6 +14,8 @@ type StatsData = {
   totalProducts: number
   totalVariants: number
   top10: { name: string; qty: number }[]
+  todaySales: SaleItem[]
+  todayDebtActivity: DebtActivity[]
 }
 
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -134,6 +138,14 @@ export default function StatsClient() {
               ))}
             </div>
           </div>
+
+
+          {/* Activités du jour */}
+          <DayActivity
+            todaySales={data.todaySales}
+            todayDebtActivity={data.todayDebtActivity}
+          />
+
 
           {/* Commandes + Finances + Inventaire — 1 col mobile, 2 col desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
