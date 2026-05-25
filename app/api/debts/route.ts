@@ -123,7 +123,7 @@ export async function PATCH(request: Request) {
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-    await admin.from('debt_payments').insert({
+    await (admin as any).from('debt_payments').insert({
       order_id,
       amount,
       payment_type: 'partial',
@@ -178,7 +178,7 @@ export async function PATCH(request: Request) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  await admin.from('debt_payments').insert({
+  await (admin as any).from('debt_payments').insert({
     order_id,
     amount: order.balance_due,
     payment_type: 'full',
