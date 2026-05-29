@@ -1,3 +1,4 @@
+// app/(back-office)/orders/new/page.tsx
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -169,6 +170,13 @@ export default function NewOrderPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    const overStock = cart.find(i => i.quantity > i.variant.stock_qty)
+    if (overStock) {
+      setError(`Stock insuffisant pour "${overStock.variant.products?.name}" (max ${overStock.variant.stock_qty})`)
+      return
+    }
+
     if (cart.length === 0) { setError('Ajoutez au moins un article'); return }
     setLoading(true)
     setError(null)
@@ -304,6 +312,15 @@ export default function NewOrderPage() {
                         <p className="text-xs text-gray-400">
                           {[item.variant.storage, item.variant.color, item.variant.sku].filter(Boolean).join(' · ')}
                         </p>
+                        <span className={`inline-flex items-center gap-1 text-sm font-semibold rounded-full px-2 py-0.5 mt-1 ${
+                          item.variant.stock_qty === 0
+                            ? 'bg-red-50 text-red-600 border border-red-200'
+                            : item.variant.stock_qty <= 3
+                            ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                            : 'bg-green-50 text-green-600 border border-green-200'
+                        }`}>
+                          📦 Stock : {item.variant.stock_qty}
+                        </span>
                       </div>
                       <button onClick={() => removeFromCart(item.variant.id)}
                         className="text-xs text-red-400 hover:text-red-600">✕</button>
@@ -311,10 +328,22 @@ export default function NewOrderPage() {
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <label className="text-xs text-gray-500">Qté</label>
-                        <input type="number" min="1" max={item.variant.stock_qty}
+                        <input
+                          type="number" min="1"
+                          max={item.variant.stock_qty}
                           value={item.quantity}
                           onChange={e => updateCartItem(item.variant.id, 'quantity', parseInt(e.target.value) || 1)}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm mt-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                          className={`w-full border rounded px-2 py-1 text-sm mt-0.5 focus:outline-none focus:ring-1 ${
+                            item.quantity > item.variant.stock_qty
+                              ? 'border-red-500 focus:ring-red-500 bg-red-50'
+                              : 'border-gray-300 focus:ring-blue-500'
+                          }`}
+                        />
+                        {item.quantity > item.variant.stock_qty && (
+                          <p className="text-xs text-red-500 mt-0.5">
+                            Stock insuffisant ({item.variant.stock_qty} dispo)
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-xs text-gray-500">Prix unitaire</label>
