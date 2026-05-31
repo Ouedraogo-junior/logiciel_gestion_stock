@@ -118,12 +118,85 @@ export async function PATCH(request: Request) {
 
   if (!movements.length) return NextResponse.json({ error: 'Quantités invalides' }, { status: 400 })
 
-  const { error } = await admin.from('stock_movements').insert(movements)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // ── 1. Vérifier les quantités déjà retournées par variant ────────────────
+  const variantIds = movements.map((m: any) => m.variant_id)
 
-  revalidatePath('/stock')
-  revalidatePath('/receipts')
-  revalidatePath('/orders') 
+  const { data: existingReturns } = await admin
+    .from('stock_movements')
+    .select('variant_id, quantity')
+    .eq('reference_id', receipt_id)
+    .eq('reason', 'Retour')
+    .in('variant_id', variantIds)
 
-  return NextResponse.json({ success: true })
+  const alreadyReturnedMap = (existingReturns ?? []).reduce((acc: Record<string, number>, m: any) => {
+    acc[m.variant_id] = (acc[m.variant_id] ?? 0) + m.quantity
+    return acc
+  }, {})
+
+  const { data: orderItems } = await admin
+    .from('order_items')
+    .select('variant_id, quantity, subtotal')
+    .eq('order_id', order_id)
+
+  const orderItemMap = (orderItems ?? []).reduce((acc: Record<string, { quantity: number; subtotal: number }>, i: any) => {
+    acc[i.variant_id] = { quantity: i.quantity, subtotal: i.subtotal }
+    return acc
+  }, {})
+
+  // Filtrer uniquement les mouvements encore retournables
+  const validMovements = movements.filter((m: any) => {
+    const alreadyReturned = alreadyReturnedMap[m.variant_id] ?? 0
+    const maxQty = orderItemMap[m.variant_id]?.quantity ?? 0
+    const remaining = maxQty - alreadyReturned
+    return m.quantity > 0 && m.quantity <= remaining
+  })
+
+  if (!validMovements.length) return NextResponse.json({ error: 'Ces articles ont déjà été totalement retournés' }, { status: 400 })
+
+  // ── 2. Calculer le montant à rembourser ───────────────────────────────────
+  let refund_amount = 0
+  for (const m of validMovements) {
+    const orderItem = orderItemMap[m.variant_id]
+    if (!orderItem) continue
+    const unit_net = orderItem.subtotal / orderItem.quantity
+    refund_amount += unit_net * m.quantity
+  }
+
+  // ── 3. Récupérer la commande ──────────────────────────────────────────────
+  const { data: order, error: orderError } = await admin
+    .from('orders')
+    .select('total_amount, amount_paid, balance_due')
+    .eq('id', order_id)
+    .single()
+
+  if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 })
+
+  // ── 4. Calculer les nouveaux montants ─────────────────────────────────────
+  const new_total = order.total_amount - refund_amount
+  const new_balance = Math.max(0, order.balance_due - refund_amount)
+  const absorbed_by_debt = order.balance_due - new_balance
+  const cash_refund = refund_amount - absorbed_by_debt
+  const new_amount_paid = Math.max(0, order.amount_paid - cash_refund)
+
+  // ── 5. Mettre à jour la commande ──────────────────────────────────────────
+  const { error: updateError } = await admin
+    .from('orders')
+    .update({
+      total_amount: new_total,
+      amount_paid: new_amount_paid,
+    } as any)
+    .eq('id', order_id)
+
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  // ── 6. Insérer les mouvements de stock valides ────────────────────────────
+  const { error: stockError } = await admin.from('stock_movements').insert(validMovements)
+  if (stockError) return NextResponse.json({ error: stockError.message }, { status: 500 })
+
+  revalidatePath('/receipts', 'page')
+  revalidatePath('/stock', 'page')
+  revalidatePath('/orders', 'page')
+  revalidatePath('/dashboard', 'page')
+
+  return NextResponse.json({ success: true, refund_amount })
 }

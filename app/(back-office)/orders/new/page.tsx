@@ -151,7 +151,7 @@ export default function NewOrderPage() {
           ? { ...i, quantity: i.quantity + 1 }
           : i)
       }
-      return [...c, { variant, quantity: 1, unit_price: variant.sell_price, discount: 0 }]
+      return [{ variant, quantity: 1, unit_price: variant.sell_price, discount: 0 }, ...c]
     })
     setSearch('')
   }

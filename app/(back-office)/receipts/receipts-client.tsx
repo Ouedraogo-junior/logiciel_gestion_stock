@@ -13,6 +13,7 @@ type Receipt = {
   generated_by: string | null
   seller_name: string | null
   returned_qty: number
+  returned_by_variant: Record<string, number>
   orders: {
     id: string
     order_number: string
@@ -130,9 +131,21 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
     if (!res.ok) return setReturnError(data.error)
 
     const totalReturned = Object.values(returnQtys).reduce((s, q) => s + q, 0)
+
+    // Construire le nouveau returned_by_variant à partir des items retournés
+    const updatedByVariant = { ...(returnModal.receipt.returned_by_variant ?? {}) }
+    for (const item of returnModal.receipt.orders.order_items) {
+      const variantId = item.product_variants?.id
+      if (!variantId) continue
+      const qty = returnQtys[item.id] ?? 0
+      if (qty > 0) {
+        updatedByVariant[variantId] = (updatedByVariant[variantId] ?? 0) + qty
+      }
+    }
+
     setReceipts(prev => prev.map(r =>
       r.id === returnModal.receipt.id
-        ? { ...r, returned_qty: r.returned_qty + totalReturned }
+        ? { ...r, returned_qty: r.returned_qty + totalReturned, returned_by_variant: updatedByVariant }
         : r
     ))
     setReturnModal(null)
@@ -214,6 +227,7 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
             {filtered.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-8 text-gray-400">Aucun reçu</td></tr>
             ) : filtered.map(r => (
+                // console.log(r.receipt_number, { returned_qty: r.returned_qty, totalSold: totalSold(r) }),
               <tr key={r.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.receipt_number}</td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.orders?.order_number ?? '—'}</td>
@@ -234,8 +248,13 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 <td className="px-4 py-3 text-right">
                   <div className="flex flex-col items-end gap-1.5">
                     {r.returned_qty > 0 && (
-                      <span className="text-xs text-orange-600 font-medium">
+                      <span className={`text-xs font-medium ${
+                        r.returned_qty >= totalSold(r)
+                          ? 'text-red-600'
+                          : 'text-orange-600'
+                      }`}>
                         ↩ {r.returned_qty}/{totalSold(r)} retourné{r.returned_qty > 1 ? 's' : ''}
+                        {r.returned_qty >= totalSold(r) && ' — Complet'}
                       </span>
                     )}
                     <div className="flex gap-2">
@@ -300,8 +319,13 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
               </div>
             </div>
             {r.returned_qty > 0 && (
-              <p className="text-xs text-orange-600 font-medium mb-2">
+              <p className={`text-xs font-medium mb-2 ${
+                r.returned_qty >= totalSold(r)
+                  ? 'text-red-600'
+                  : 'text-orange-600'
+              }`}>
                 ↩ {r.returned_qty}/{totalSold(r)} retourné{r.returned_qty > 1 ? 's' : ''}
+                {r.returned_qty >= totalSold(r) && ' — Complet'}
               </p>
             )}
             <div className="flex items-center justify-between">
@@ -373,8 +397,9 @@ export default function ReceiptsClient({ initialReceipts }: { initialReceipts: R
                 const v = item.product_variants
                 if (!v) return null
                 const label = [v.products?.name, v.storage, v.color].filter(Boolean).join(' · ')
-                const alreadyReturned = returnModal.receipt.returned_qty
-                const remaining = item.quantity - Math.min(alreadyReturned, item.quantity)
+                const variantId = item.product_variants?.id ?? ''
+                const alreadyReturned = (returnModal.receipt.returned_by_variant ?? {})[variantId] ?? 0
+                const remaining = item.quantity - alreadyReturned
                 return (
                   <div key={item.id} className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
