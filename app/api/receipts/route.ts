@@ -172,9 +172,10 @@ export async function PATCH(request: Request) {
   if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 })
 
   // ── 4. Calculer les nouveaux montants ─────────────────────────────────────
+  const balance_due = order.balance_due ?? 0
   const new_total = order.total_amount - refund_amount
-  const new_balance = Math.max(0, order.balance_due - refund_amount)
-  const absorbed_by_debt = order.balance_due - new_balance
+  const new_balance = Math.max(0, balance_due - refund_amount)
+  const absorbed_by_debt = balance_due - new_balance
   const cash_refund = refund_amount - absorbed_by_debt
   const new_amount_paid = Math.max(0, order.amount_paid - cash_refund)
 
